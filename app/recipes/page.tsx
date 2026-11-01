@@ -1,0 +1,103 @@
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
+import { requireHousehold } from "@/lib/household";
+import { Nav } from "@/components/nav";
+
+async function toggleFavorite(formData: FormData) {
+  "use server";
+  const { supabase } = await requireHousehold();
+  const id = String(formData.get("id"));
+  const next = formData.get("favorite") !== "true";
+  await supabase.from("recipes").update({ favorite: next }).eq("id", id);
+  revalidatePath("/recipes");
+}
+
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "favorites", label: "Favorites" },
+  { key: "keto", label: "Keto-friendly" },
+  { key: "family", label: "Family-only" },
+  { key: "quick", label: "Quick" },
+];
+
+export default async function RecipesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ f?: string; q?: string }>;
+}) {
+  const { f = "all", q = "" } = await searchParams;
+  const { supabase, inviteCode } = await requireHousehold();
+
+  let query = supabase
+    .from("recipes")
+    .select("id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite")
+    .order("name");
+  if (f === "favorites") query = query.eq("favorite", true);
+  if (f === "keto") query = query.eq("diet", "both");
+  if (f === "family") query = query.eq("diet", "family");
+  if (f === "quick") query = query.contains("tags", ["quick"]);
+  if (q) query = query.ilike("name", `%${q}%`);
+  const { data: recipes } = await query;
+
+  return (
+    <>
+      <Nav inviteCode={inviteCode} />
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <h1 className="mr-auto text-2xl font-bold">Recipes</h1>
+          <form className="flex gap-2">
+            <input type="hidden" name="f" value={f} />
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Search"
+              className="rounded-lg border px-3 py-1.5 text-sm"
+            />
+          </form>
+        </div>
+        <div className="mb-5 flex flex-wrap gap-2">
+          {FILTERS.map((x) => (
+            <Link
+              key={x.key}
+              href={`/recipes?f=${x.key}`}
+              className={`rounded-full border px-3 py-1 text-sm ${
+                f === x.key ? "bg-green-700 text-white" : "bg-white"
+              }`}
+            >
+              {x.label}
+            </Link>
+          ))}
+        </div>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {(recipes ?? []).map((r) => (
+            <li key={r.id} className="rounded-xl border bg-white p-4">
+              <div className="flex items-start justify-between gap-2">
+                <Link href={`/recipes/${r.id}`} className="font-semibold hover:underline">
+                  {r.name}
+                </Link>
+                <form action={toggleFavorite}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="favorite" value={String(r.favorite)} />
+                  <button aria-label="Toggle favorite" className="text-xl leading-none">
+                    {r.favorite ? "★" : "☆"}
+                  </button>
+                </form>
+              </div>
+              <p className="mt-1 text-sm text-neutral-600">{r.description}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                <span className="rounded bg-green-100 px-2 py-0.5">
+                  {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto" : "Family only"}
+                </span>
+                <span className="rounded bg-neutral-100 px-2 py-0.5">
+                  {(r.prep_minutes ?? 0) + (r.cook_minutes ?? 0)} min
+                </span>
+                <span className="rounded bg-neutral-100 px-2 py-0.5">{r.difficulty}</span>
+              </div>
+            </li>
+          ))}
+          {recipes?.length === 0 && <li className="text-neutral-500">No recipes match.</li>}
+        </ul>
+      </main>
+    </>
+  );
+}

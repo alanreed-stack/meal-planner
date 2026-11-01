@@ -1,0 +1,496 @@
+[
+  {
+    "slug": "sheet-pan-chicken-broccoli",
+    "name": "Sheet-Pan Garlic Chicken Thighs & Broccoli",
+    "description": "One pan, almost no cleanup. Crispy-skinned thighs roasted over broccoli.",
+    "diet": "both",
+    "keto_swap": "Naturally keto. Family can add microwave rice or roasted potatoes on the side.",
+    "prep_minutes": 10, "cook_minutes": 35, "servings": 4, "difficulty": "easy",
+    "tags": ["sheet-pan", "weeknight", "chicken"],
+    "ingredients": [
+      {"name": "bone-in chicken thighs", "qty": 8, "unit": "piece", "category": "meat"},
+      {"name": "broccoli crowns", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "garlic", "qty": 4, "unit": "clove", "category": "produce"},
+      {"name": "olive oil", "qty": 3, "unit": "tbsp", "category": "pantry"},
+      {"name": "paprika", "qty": 2, "unit": "tsp", "category": "pantry"},
+      {"name": "lemon", "qty": 1, "unit": "piece", "category": "produce"}
+    ],
+    "steps": [
+      "Heat oven to 425F. Toss thighs with 2 tbsp oil, paprika, minced garlic, salt and pepper.",
+      "Cut broccoli into florets and toss with remaining oil and salt on a large sheet pan.",
+      "Nestle thighs skin-side up on top of the broccoli.",
+      "Roast 30 to 35 minutes until chicken hits 175F and skin is crisp.",
+      "Squeeze lemon over everything and serve."
+    ]
+  },
+  {
+    "slug": "taco-night",
+    "name": "Taco Night",
+    "description": "Seasoned ground beef with all the toppings. Everybody builds their own.",
+    "diet": "both",
+    "keto_swap": "Keto: serve in a bowl over shredded lettuce or in lettuce cups, skip beans and tortillas. Family: tortillas or hard shells.",
+    "prep_minutes": 10, "cook_minutes": 15, "servings": 5, "difficulty": "easy",
+    "tags": ["mexican", "build-your-own", "quick"],
+    "ingredients": [
+      {"name": "ground beef", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "taco seasoning", "qty": 2, "unit": "packet", "category": "pantry"},
+      {"name": "shredded cheddar", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "romaine lettuce", "qty": 1, "unit": "head", "category": "produce"},
+      {"name": "tomatoes", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "sour cream", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "avocado", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "taco shells or tortillas", "qty": 1, "unit": "box", "category": "bakery", "family_only": true}
+    ],
+    "steps": [
+      "Brown the beef in a large skillet over medium-high heat, breaking it up, about 8 minutes.",
+      "Drain extra fat, add taco seasoning and 2/3 cup water, simmer 5 minutes.",
+      "Chop lettuce and tomatoes, slice avocado, set out cheese and sour cream.",
+      "Everyone builds their own: shells for the family, lettuce bowl for keto."
+    ]
+  },
+  {
+    "slug": "smash-burgers",
+    "name": "Smash Burgers",
+    "description": "Thin, crispy-edged burgers cooked in a hot skillet in minutes.",
+    "diet": "both",
+    "keto_swap": "Keto: wrap in lettuce, skip the bun and ketchup (use mustard, pickles, mayo). Family: regular buns.",
+    "prep_minutes": 10, "cook_minutes": 10, "servings": 5, "difficulty": "easy",
+    "tags": ["grill-night", "quick", "beef"],
+    "ingredients": [
+      {"name": "ground beef 80/20", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "American or cheddar slices", "qty": 10, "unit": "slice", "category": "dairy"},
+      {"name": "butter lettuce", "qty": 1, "unit": "head", "category": "produce"},
+      {"name": "tomato", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "dill pickles", "qty": 1, "unit": "jar", "category": "pantry"},
+      {"name": "burger buns", "qty": 1, "unit": "pack", "category": "bakery", "family_only": true},
+      {"name": "French fries (frozen)", "qty": 1, "unit": "bag", "category": "frozen", "family_only": true}
+    ],
+    "steps": [
+      "Roll beef into 10 balls. Heat a cast-iron or heavy skillet on high.",
+      "Smash each ball flat with a spatula, season with salt and pepper.",
+      "Cook 2 minutes, flip, top with cheese, cook 1 more minute.",
+      "Serve on buns for the family, in lettuce wraps for keto."
+    ]
+  },
+  {
+    "slug": "sausage-peppers-sheet-pan",
+    "name": "Sausage & Peppers Sheet Pan",
+    "description": "Smoked sausage with peppers and onions. Fast and hard to mess up.",
+    "diet": "both",
+    "keto_swap": "Keto: sausage and veggies only. Family: add baby potatoes to the pan or serve on hoagie rolls.",
+    "prep_minutes": 10, "cook_minutes": 25, "servings": 4, "difficulty": "easy",
+    "tags": ["sheet-pan", "weeknight", "pork"],
+    "ingredients": [
+      {"name": "smoked sausage", "qty": 2, "unit": "pack", "category": "meat"},
+      {"name": "bell peppers", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "olive oil", "qty": 2, "unit": "tbsp", "category": "pantry"},
+      {"name": "Italian seasoning", "qty": 1, "unit": "tbsp", "category": "pantry"},
+      {"name": "baby potatoes", "qty": 1.5, "unit": "lb", "category": "produce", "family_only": true}
+    ],
+    "steps": [
+      "Heat oven to 425F. Slice sausage, peppers and onion.",
+      "Toss on a sheet pan with oil and Italian seasoning (potatoes go on a second pan or the same pan, cut small).",
+      "Roast 25 minutes, stirring once, until browned at the edges."
+    ]
+  },
+  {
+    "slug": "lemon-butter-salmon-asparagus",
+    "name": "Lemon Butter Salmon with Asparagus",
+    "description": "Restaurant-style dinner in 20 minutes.",
+    "diet": "both",
+    "keto_swap": "Naturally keto. Family can add rice or couscous.",
+    "prep_minutes": 5, "cook_minutes": 15, "servings": 4, "difficulty": "easy",
+    "tags": ["fish", "quick", "sheet-pan"],
+    "ingredients": [
+      {"name": "salmon fillets", "qty": 4, "unit": "piece", "category": "meat"},
+      {"name": "asparagus", "qty": 1, "unit": "lb", "category": "produce"},
+      {"name": "butter", "qty": 4, "unit": "tbsp", "category": "dairy"},
+      {"name": "lemon", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "garlic", "qty": 3, "unit": "clove", "category": "produce"}
+    ],
+    "steps": [
+      "Heat oven to 400F. Put salmon and trimmed asparagus on a lined sheet pan.",
+      "Melt butter with minced garlic and juice of 1 lemon, spoon over everything.",
+      "Season with salt and pepper, top salmon with lemon slices.",
+      "Bake 12 to 15 minutes until salmon flakes easily."
+    ]
+  },
+  {
+    "slug": "chicken-fajita-skillet",
+    "name": "Chicken Fajita Skillet",
+    "description": "Sizzling chicken, peppers and onions. Tortillas on the side for those who want them.",
+    "diet": "both",
+    "keto_swap": "Keto: eat it as a bowl with cheese, sour cream and guac. Family: warm tortillas and rice.",
+    "prep_minutes": 15, "cook_minutes": 15, "servings": 4, "difficulty": "easy",
+    "tags": ["mexican", "skillet", "chicken", "quick"],
+    "ingredients": [
+      {"name": "chicken breasts", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "bell peppers", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "fajita seasoning", "qty": 2, "unit": "tbsp", "category": "pantry"},
+      {"name": "olive oil", "qty": 2, "unit": "tbsp", "category": "pantry"},
+      {"name": "shredded Mexican cheese", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "flour tortillas", "qty": 1, "unit": "pack", "category": "bakery", "family_only": true}
+    ],
+    "steps": [
+      "Slice chicken, peppers and onion into strips. Toss chicken with seasoning.",
+      "Sear chicken in oil over high heat, 6 to 7 minutes, until cooked through. Remove.",
+      "Cook peppers and onion 5 minutes until charred and soft.",
+      "Return chicken, toss together, and serve with cheese and tortillas."
+    ]
+  },
+  {
+    "slug": "spaghetti-meat-sauce",
+    "name": "Spaghetti & Meat Sauce",
+    "description": "Classic Sunday dinner. Big batch, great leftovers.",
+    "diet": "both",
+    "keto_swap": "Keto: serve the sauce over zucchini noodles or spaghetti squash. Family: regular spaghetti.",
+    "prep_minutes": 10, "cook_minutes": 30, "servings": 5, "difficulty": "easy",
+    "tags": ["italian", "batch-cook", "kid-favorite"],
+    "ingredients": [
+      {"name": "ground beef", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "marinara sauce", "qty": 2, "unit": "jar", "category": "pantry"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "garlic", "qty": 3, "unit": "clove", "category": "produce"},
+      {"name": "parmesan", "qty": 4, "unit": "oz", "category": "dairy"},
+      {"name": "zucchini", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "spaghetti", "qty": 1, "unit": "box", "category": "pantry", "family_only": true}
+    ],
+    "steps": [
+      "Brown beef with diced onion and garlic, 8 to 10 minutes. Drain.",
+      "Add marinara, simmer 20 minutes.",
+      "Boil spaghetti for the family. Spiralize zucchini and saute 2 to 3 minutes for keto.",
+      "Top with parmesan."
+    ]
+  },
+  {
+    "slug": "slow-cooker-pulled-pork",
+    "name": "Slow Cooker Pulled Pork",
+    "description": "Set it in the morning, shred it at dinner. Makes plenty for leftovers.",
+    "diet": "both",
+    "keto_swap": "Keto: sugar-free BBQ sauce, serve with slaw or green beans. Family: buns and regular BBQ sauce.",
+    "prep_minutes": 10, "cook_minutes": 480, "servings": 8, "difficulty": "easy",
+    "tags": ["slow-cooker", "batch-cook", "pork", "hands-off"],
+    "ingredients": [
+      {"name": "pork shoulder (Boston butt)", "qty": 4, "unit": "lb", "category": "meat"},
+      {"name": "BBQ rub or brown sugar-free rub", "qty": 3, "unit": "tbsp", "category": "pantry"},
+      {"name": "chicken broth", "qty": 1, "unit": "cup", "category": "pantry"},
+      {"name": "BBQ sauce", "qty": 1, "unit": "bottle", "category": "pantry"},
+      {"name": "coleslaw mix", "qty": 1, "unit": "bag", "category": "produce"},
+      {"name": "burger buns", "qty": 1, "unit": "pack", "category": "bakery", "family_only": true}
+    ],
+    "steps": [
+      "Rub the pork all over and set in the slow cooker with the broth.",
+      "Cook on low 8 to 10 hours until it shreds easily.",
+      "Shred with two forks, toss in some of the cooking liquid and BBQ sauce.",
+      "Serve on buns with slaw, or just slaw for keto."
+    ]
+  },
+  {
+    "slug": "beef-broccoli-stir-fry",
+    "name": "Beef & Broccoli Stir Fry",
+    "description": "Takeout-style flank steak and broccoli at home.",
+    "diet": "both",
+    "keto_swap": "Keto: use coconut aminos or low-sugar soy and serve over cauliflower rice. Family: white rice.",
+    "prep_minutes": 15, "cook_minutes": 12, "servings": 4, "difficulty": "medium",
+    "tags": ["asian", "skillet", "beef"],
+    "ingredients": [
+      {"name": "flank steak", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "broccoli crowns", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "soy sauce or coconut aminos", "qty": 0.33, "unit": "cup", "category": "pantry"},
+      {"name": "garlic", "qty": 4, "unit": "clove", "category": "produce"},
+      {"name": "fresh ginger", "qty": 1, "unit": "tbsp", "category": "produce"},
+      {"name": "sesame oil", "qty": 1, "unit": "tbsp", "category": "pantry"},
+      {"name": "cauliflower rice (frozen)", "qty": 2, "unit": "bag", "category": "frozen"},
+      {"name": "white rice", "qty": 2, "unit": "cup", "category": "pantry", "family_only": true}
+    ],
+    "steps": [
+      "Slice steak thin against the grain. Mix soy, garlic, ginger and sesame oil as the sauce.",
+      "Sear beef in a very hot pan in two batches, about 2 minutes each. Set aside.",
+      "Stir-fry broccoli with a splash of water, 4 minutes.",
+      "Return beef, pour in sauce, toss 1 minute. Serve over rice or cauliflower rice."
+    ]
+  },
+  {
+    "slug": "egg-roll-in-a-bowl",
+    "name": "Egg Roll in a Bowl",
+    "description": "All the egg roll flavor, no wrapper. 20 minutes.",
+    "diet": "both",
+    "keto_swap": "Keto as written. Family can eat it over rice or with store-bought egg rolls on the side.",
+    "prep_minutes": 5, "cook_minutes": 15, "servings": 4, "difficulty": "easy",
+    "tags": ["asian", "skillet", "quick", "pork"],
+    "ingredients": [
+      {"name": "ground pork or turkey", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "coleslaw mix", "qty": 2, "unit": "bag", "category": "produce"},
+      {"name": "soy sauce or coconut aminos", "qty": 3, "unit": "tbsp", "category": "pantry"},
+      {"name": "garlic", "qty": 3, "unit": "clove", "category": "produce"},
+      {"name": "fresh ginger", "qty": 1, "unit": "tbsp", "category": "produce"},
+      {"name": "green onions", "qty": 1, "unit": "bunch", "category": "produce"},
+      {"name": "sesame oil", "qty": 1, "unit": "tbsp", "category": "pantry"}
+    ],
+    "steps": [
+      "Brown the meat with garlic and ginger in a large skillet, 7 minutes.",
+      "Add coleslaw mix and soy sauce, stir and cook until wilted, 6 to 8 minutes.",
+      "Finish with sesame oil and sliced green onions."
+    ]
+  },
+  {
+    "slug": "chicken-alfredo-bake",
+    "name": "Chicken Alfredo Bake",
+    "description": "Creamy and cheesy, a crowd pleaser.",
+    "diet": "both",
+    "keto_swap": "Keto: bake the chicken and sauce over broccoli instead of pasta in a separate dish. Family: penne.",
+    "prep_minutes": 15, "cook_minutes": 25, "servings": 5, "difficulty": "medium",
+    "tags": ["italian", "casserole", "chicken", "kid-favorite"],
+    "ingredients": [
+      {"name": "chicken breasts", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "Alfredo sauce", "qty": 2, "unit": "jar", "category": "pantry"},
+      {"name": "shredded mozzarella", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "broccoli florets", "qty": 1, "unit": "lb", "category": "produce"},
+      {"name": "penne", "qty": 1, "unit": "box", "category": "pantry", "family_only": true}
+    ],
+    "steps": [
+      "Cook and cube the chicken (bake or pan sear). Boil penne for the family.",
+      "Mix chicken, sauce and pasta in a baking dish for the family. Put chicken, sauce and steamed broccoli in a small dish for keto.",
+      "Top both with mozzarella.",
+      "Bake at 375F for 20 to 25 minutes until bubbly."
+    ]
+  },
+  {
+    "slug": "creamy-tuscan-chicken",
+    "name": "Creamy Tuscan Chicken",
+    "description": "Pan-seared chicken in a garlic, sun-dried tomato and spinach cream sauce.",
+    "diet": "both",
+    "keto_swap": "Naturally keto. Family can serve it over pasta or with bread.",
+    "prep_minutes": 10, "cook_minutes": 25, "servings": 4, "difficulty": "medium",
+    "tags": ["skillet", "chicken", "date-night"],
+    "ingredients": [
+      {"name": "chicken breasts", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "heavy cream", "qty": 1, "unit": "cup", "category": "dairy"},
+      {"name": "baby spinach", "qty": 5, "unit": "oz", "category": "produce"},
+      {"name": "sun-dried tomatoes", "qty": 0.5, "unit": "cup", "category": "pantry"},
+      {"name": "garlic", "qty": 4, "unit": "clove", "category": "produce"},
+      {"name": "parmesan", "qty": 0.5, "unit": "cup", "category": "dairy"},
+      {"name": "chicken broth", "qty": 0.5, "unit": "cup", "category": "pantry"}
+    ],
+    "steps": [
+      "Slice chicken breasts in half horizontally, season, and sear 5 minutes per side. Remove.",
+      "Saute garlic in the same pan, add broth, cream and parmesan, simmer 3 minutes.",
+      "Add sun-dried tomatoes and spinach until wilted.",
+      "Return chicken to the pan and spoon sauce over it."
+    ]
+  },
+  {
+    "slug": "meatballs-marinara",
+    "name": "Baked Meatballs & Marinara",
+    "description": "Easy oven meatballs. Make extra and freeze half.",
+    "diet": "both",
+    "keto_swap": "Keto: use almond flour or crushed pork rinds in the meatballs, serve over zoodles. Family: regular breadcrumbs and pasta.",
+    "prep_minutes": 15, "cook_minutes": 25, "servings": 5, "difficulty": "medium",
+    "tags": ["italian", "freezer-friendly", "kid-favorite"],
+    "ingredients": [
+      {"name": "ground beef", "qty": 1, "unit": "lb", "category": "meat"},
+      {"name": "ground pork", "qty": 1, "unit": "lb", "category": "meat"},
+      {"name": "eggs", "qty": 2, "unit": "piece", "category": "dairy"},
+      {"name": "parmesan", "qty": 0.5, "unit": "cup", "category": "dairy"},
+      {"name": "almond flour", "qty": 0.5, "unit": "cup", "category": "pantry"},
+      {"name": "marinara sauce", "qty": 2, "unit": "jar", "category": "pantry"},
+      {"name": "zucchini", "qty": 3, "unit": "piece", "category": "produce"},
+      {"name": "spaghetti", "qty": 1, "unit": "box", "category": "pantry", "family_only": true}
+    ],
+    "steps": [
+      "Heat oven to 400F. Mix meats, eggs, parmesan, almond flour, salt, pepper and Italian seasoning.",
+      "Roll into 20 balls and bake on a lined sheet 18 to 20 minutes.",
+      "Warm marinara, add meatballs.",
+      "Serve over spaghetti for the family and zoodles for keto."
+    ]
+  },
+  {
+    "slug": "chicken-quesadillas",
+    "name": "Cheesy Chicken Quesadillas",
+    "description": "Fast, kid-approved, uses rotisserie chicken.",
+    "diet": "family",
+    "keto_swap": "",
+    "prep_minutes": 10, "cook_minutes": 15, "servings": 4, "difficulty": "easy",
+    "tags": ["mexican", "quick", "kid-favorite", "travel-week"],
+    "ingredients": [
+      {"name": "rotisserie chicken", "qty": 1, "unit": "piece", "category": "meat"},
+      {"name": "flour tortillas (large)", "qty": 8, "unit": "piece", "category": "bakery"},
+      {"name": "shredded Mexican cheese", "qty": 16, "unit": "oz", "category": "dairy"},
+      {"name": "salsa", "qty": 1, "unit": "jar", "category": "pantry"},
+      {"name": "sour cream", "qty": 8, "unit": "oz", "category": "dairy"}
+    ],
+    "steps": [
+      "Shred the chicken.",
+      "Fill half of each tortilla with cheese and chicken, fold over.",
+      "Cook in a dry skillet 2 to 3 minutes per side until golden and melty.",
+      "Slice and serve with salsa and sour cream."
+    ]
+  },
+  {
+    "slug": "one-pot-chicken-rice",
+    "name": "One-Pot Chicken & Rice",
+    "description": "Everything cooks in one pot. Great for travel weeks.",
+    "diet": "family",
+    "keto_swap": "",
+    "prep_minutes": 10, "cook_minutes": 35, "servings": 4, "difficulty": "easy",
+    "tags": ["one-pot", "chicken", "travel-week", "weeknight"],
+    "ingredients": [
+      {"name": "chicken thighs (boneless)", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "long-grain rice", "qty": 1.5, "unit": "cup", "category": "pantry"},
+      {"name": "chicken broth", "qty": 3, "unit": "cup", "category": "pantry"},
+      {"name": "frozen peas and carrots", "qty": 1, "unit": "bag", "category": "frozen"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "garlic powder", "qty": 1, "unit": "tsp", "category": "pantry"}
+    ],
+    "steps": [
+      "Season chicken and brown in a Dutch oven or deep skillet, 3 minutes per side. Remove.",
+      "Cook diced onion 3 minutes, stir in rice, then add broth and garlic powder.",
+      "Nestle chicken on top, cover, and simmer on low 20 minutes.",
+      "Stir in veggies, cover 5 more minutes, then fluff."
+    ]
+  },
+  {
+    "slug": "baked-ziti",
+    "name": "Easy Baked Ziti",
+    "description": "No-fuss pasta bake that feeds everybody twice.",
+    "diet": "family",
+    "keto_swap": "",
+    "prep_minutes": 15, "cook_minutes": 35, "servings": 6, "difficulty": "easy",
+    "tags": ["italian", "casserole", "kid-favorite", "travel-week"],
+    "ingredients": [
+      {"name": "ziti or penne", "qty": 1, "unit": "box", "category": "pantry"},
+      {"name": "ground beef or Italian sausage", "qty": 1, "unit": "lb", "category": "meat"},
+      {"name": "marinara sauce", "qty": 2, "unit": "jar", "category": "pantry"},
+      {"name": "ricotta", "qty": 15, "unit": "oz", "category": "dairy"},
+      {"name": "shredded mozzarella", "qty": 12, "unit": "oz", "category": "dairy"}
+    ],
+    "steps": [
+      "Boil pasta 2 minutes shy of package time. Brown the meat.",
+      "Mix pasta, meat, sauce and half the mozzarella. Spread into a 9x13 dish.",
+      "Dollop ricotta on top, then add the rest of the mozzarella.",
+      "Bake at 375F for 25 minutes, covered first 15, uncovered the rest."
+    ]
+  },
+  {
+    "slug": "sloppy-joes",
+    "name": "Sloppy Joes",
+    "description": "Kid classic. 20 minutes, one pan.",
+    "diet": "family",
+    "keto_swap": "",
+    "prep_minutes": 5, "cook_minutes": 20, "servings": 5, "difficulty": "easy",
+    "tags": ["quick", "beef", "kid-favorite", "travel-week"],
+    "ingredients": [
+      {"name": "ground beef", "qty": 1.5, "unit": "lb", "category": "meat"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "ketchup", "qty": 0.75, "unit": "cup", "category": "pantry"},
+      {"name": "yellow mustard", "qty": 1, "unit": "tbsp", "category": "pantry"},
+      {"name": "brown sugar", "qty": 1, "unit": "tbsp", "category": "pantry"},
+      {"name": "burger buns", "qty": 1, "unit": "pack", "category": "bakery"}
+    ],
+    "steps": [
+      "Brown beef and diced onion, drain.",
+      "Stir in ketchup, mustard, brown sugar, salt and pepper. Simmer 10 minutes.",
+      "Spoon onto toasted buns."
+    ]
+  },
+  {
+    "slug": "chili-no-bean",
+    "name": "Hearty Beef Chili",
+    "description": "Thick, meaty, and good for leftovers. Beans are optional.",
+    "diet": "both",
+    "keto_swap": "Keto: leave out the beans and top with cheese and sour cream. Family: stir in a can of kidney beans and add Fritos or cornbread.",
+    "prep_minutes": 10, "cook_minutes": 45, "servings": 6, "difficulty": "easy",
+    "tags": ["batch-cook", "freezer-friendly", "beef", "cold-weather"],
+    "ingredients": [
+      {"name": "ground beef", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "diced tomatoes (canned)", "qty": 2, "unit": "can", "category": "pantry"},
+      {"name": "tomato paste", "qty": 3, "unit": "tbsp", "category": "pantry"},
+      {"name": "yellow onion", "qty": 1, "unit": "piece", "category": "produce"},
+      {"name": "chili powder", "qty": 3, "unit": "tbsp", "category": "pantry"},
+      {"name": "cumin", "qty": 1, "unit": "tbsp", "category": "pantry"},
+      {"name": "shredded cheddar", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "kidney beans (canned)", "qty": 1, "unit": "can", "category": "pantry", "family_only": true}
+    ],
+    "steps": [
+      "Brown beef and onion in a big pot, drain.",
+      "Add tomato paste, chili powder and cumin, stir for 1 minute.",
+      "Add tomatoes and 1 cup water. Simmer 35 to 40 minutes.",
+      "Add beans to the family portion at the end. Serve with cheese."
+    ]
+  },
+  {
+    "slug": "breakfast-for-dinner",
+    "name": "Breakfast for Dinner",
+    "description": "Scrambled eggs, bacon, and pancakes for those who want them.",
+    "diet": "both",
+    "keto_swap": "Keto: eggs, bacon, sausage and avocado. Family: pancakes and fruit.",
+    "prep_minutes": 10, "cook_minutes": 20, "servings": 5, "difficulty": "easy",
+    "tags": ["breakfast", "quick", "kid-favorite"],
+    "ingredients": [
+      {"name": "eggs", "qty": 12, "unit": "piece", "category": "dairy"},
+      {"name": "bacon", "qty": 1, "unit": "lb", "category": "meat"},
+      {"name": "breakfast sausage", "qty": 1, "unit": "pack", "category": "meat"},
+      {"name": "avocado", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "butter", "qty": 4, "unit": "tbsp", "category": "dairy"},
+      {"name": "pancake mix", "qty": 1, "unit": "box", "category": "pantry", "family_only": true},
+      {"name": "maple syrup", "qty": 1, "unit": "bottle", "category": "pantry", "family_only": true},
+      {"name": "strawberries", "qty": 1, "unit": "lb", "category": "produce", "family_only": true}
+    ],
+    "steps": [
+      "Bake bacon on a sheet pan at 400F for 15 to 20 minutes.",
+      "Cook sausage in a skillet.",
+      "Scramble eggs low and slow in butter.",
+      "Make pancakes for the family while the rest finishes."
+    ]
+  },
+  {
+    "slug": "crispy-baked-chicken-tenders",
+    "name": "Crispy Baked Chicken Tenders",
+    "description": "Crunchy oven-baked tenders without the fryer.",
+    "diet": "both",
+    "keto_swap": "Keto: coat in almond flour and parmesan. Family: panko breadcrumbs. Same method, two trays.",
+    "prep_minutes": 15, "cook_minutes": 20, "servings": 5, "difficulty": "medium",
+    "tags": ["chicken", "kid-favorite", "oven"],
+    "ingredients": [
+      {"name": "chicken tenders", "qty": 2, "unit": "lb", "category": "meat"},
+      {"name": "eggs", "qty": 2, "unit": "piece", "category": "dairy"},
+      {"name": "almond flour", "qty": 1, "unit": "cup", "category": "pantry"},
+      {"name": "parmesan", "qty": 0.5, "unit": "cup", "category": "dairy"},
+      {"name": "panko breadcrumbs", "qty": 1.5, "unit": "cup", "category": "pantry", "family_only": true},
+      {"name": "ranch dressing", "qty": 1, "unit": "bottle", "category": "pantry"},
+      {"name": "green beans", "qty": 1, "unit": "lb", "category": "produce"}
+    ],
+    "steps": [
+      "Heat oven to 425F with a rack on a sheet pan.",
+      "Dip tenders in beaten egg, then coat: almond flour and parmesan for keto, panko for the family.",
+      "Bake 18 to 20 minutes, flipping halfway, until golden and 165F inside.",
+      "Roast green beans on the side. Serve with ranch."
+    ]
+  },
+  {
+    "slug": "slow-cooker-chicken-tacos",
+    "name": "Slow Cooker Chicken Tacos",
+    "description": "Dump chicken, salsa and spices in the cooker and shred. Very low effort.",
+    "diet": "both",
+    "keto_swap": "Keto: serve over lettuce with cheese, sour cream and avocado. Family: tortillas.",
+    "prep_minutes": 5, "cook_minutes": 240, "servings": 6, "difficulty": "easy",
+    "tags": ["slow-cooker", "mexican", "hands-off", "travel-week"],
+    "ingredients": [
+      {"name": "chicken breasts", "qty": 2.5, "unit": "lb", "category": "meat"},
+      {"name": "salsa", "qty": 1, "unit": "jar", "category": "pantry"},
+      {"name": "taco seasoning", "qty": 2, "unit": "packet", "category": "pantry"},
+      {"name": "shredded Mexican cheese", "qty": 8, "unit": "oz", "category": "dairy"},
+      {"name": "romaine lettuce", "qty": 1, "unit": "head", "category": "produce"},
+      {"name": "avocado", "qty": 2, "unit": "piece", "category": "produce"},
+      {"name": "small tortillas", "qty": 1, "unit": "pack", "category": "bakery", "family_only": true}
+    ],
+    "steps": [
+      "Put chicken, salsa and taco seasoning in the slow cooker.",
+      "Cook on low 6 to 8 hours or high 3 to 4 hours.",
+      "Shred with two forks and stir back into the juices.",
+      "Serve with toppings."
+    ]
+  }
+]
