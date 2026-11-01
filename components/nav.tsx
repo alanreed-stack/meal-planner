@@ -17,6 +17,7 @@ export function Nav({ inviteCode }: { inviteCode?: string }) {
           Meal Planner
         </Link>
         <Link href="/plan">This week</Link>
+        <Link href="/shopping">Shopping</Link>
         <Link href="/recipes">Recipes</Link>
         <span className="flex-1" />
         {inviteCode && (
