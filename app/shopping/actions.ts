@@ -58,19 +58,33 @@ export async function generateList(formData: FormData) {
     }
   }
 
+  const { data: saved } = await supabase
+    .from("kroger_matches")
+    .select("name_key, upc, product_id, description, price, order_qty")
+    .eq("household_id", householdId);
+  const savedBy = new Map((saved ?? []).map((m) => [m.name_key, m]));
+
   await supabase.from("shopping_items").delete().eq("week_id", week.id).eq("manual", false);
   if (merged.size) {
     const { error } = await supabase.from("shopping_items").insert(
-      [...merged.entries()].map(([k, v]) => ({
-        household_id: householdId,
-        week_id: week.id,
-        name: v.name,
-        unit: v.unit,
-        qty: v.qty == null ? null : Math.round(v.qty * 100) / 100,
-        category: v.category,
-        to_order: !wasOff.has(k),
-        manual: false,
-      }))
+      [...merged.entries()].map(([k, v]) => {
+        const m = savedBy.get(v.name.trim().toLowerCase());
+        return {
+          household_id: householdId,
+          week_id: week.id,
+          name: v.name,
+          unit: v.unit,
+          qty: v.qty == null ? null : Math.round(v.qty * 100) / 100,
+          category: v.category,
+          to_order: !wasOff.has(k),
+          manual: false,
+          kroger_upc: m?.upc ?? null,
+          kroger_product_id: m?.product_id ?? null,
+          kroger_description: m?.description ?? null,
+          kroger_price: m?.price ?? null,
+          order_qty: m?.order_qty ?? 1,
+        };
+      })
     );
     if (error) throw error;
   }
@@ -112,7 +126,18 @@ export async function addItem(formData: FormData) {
     week = data;
   }
   const qty = Number(formData.get("qty"));
+  const { data: m } = await supabase
+    .from("kroger_matches")
+    .select("upc, product_id, description, price, order_qty")
+    .eq("household_id", householdId)
+    .eq("name_key", name.toLowerCase())
+    .maybeSingle();
   await supabase.from("shopping_items").insert({
+    kroger_upc: m?.upc ?? null,
+    kroger_product_id: m?.product_id ?? null,
+    kroger_description: m?.description ?? null,
+    kroger_price: m?.price ?? null,
+    order_qty: m?.order_qty ?? 1,
     household_id: householdId,
     week_id: week!.id,
     name,

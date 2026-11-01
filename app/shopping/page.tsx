@@ -123,13 +123,29 @@ export default async function ShoppingPage({
           )}
           {kroger === "sent" && (
             <p className="mb-2 rounded bg-green-50 px-2 py-1">
-              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart. Open the Kroger app or site to
-              review and check out.
+              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart.{" "}
+              <a
+                href="https://www.kroger.com/cart"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium underline"
+              >
+                Open my Kroger cart
+              </a>{" "}
+              to review and check out.
             </p>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
             <span>Account: {conn ? "connected ✓" : "not connected"}</span>
+            <a
+              href="https://www.kroger.com/cart"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded border px-3 py-1"
+            >
+              Open Kroger cart ↗
+            </a>
             <a href="/api/kroger/connect" className="rounded border px-3 py-1">
               {conn ? "Reconnect" : "Connect Kroger"}
             </a>

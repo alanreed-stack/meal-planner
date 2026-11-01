@@ -5,6 +5,26 @@ import { redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { addToCart, refreshToken, searchProducts } from "@/lib/kroger";
 
+const keyOf = (name: string) => name.trim().toLowerCase();
+
+async function remember(
+  supabase: Awaited<ReturnType<typeof requireHousehold>>["supabase"],
+  householdId: string,
+  name: string,
+  m: { upc: string; product_id: string; description: string; price: number | null; order_qty?: number }
+) {
+  await supabase.from("kroger_matches").upsert({
+    household_id: householdId,
+    name_key: keyOf(name),
+    upc: m.upc,
+    product_id: m.product_id,
+    description: m.description,
+    price: m.price,
+    ...(m.order_qty ? { order_qty: m.order_qty } : {}),
+    updated_at: new Date().toISOString(),
+  });
+}
+
 async function storeId() {
   const ctx = await requireHousehold();
   const { data } = await ctx.supabase
@@ -64,15 +84,22 @@ export async function matchItems(formData: FormData) {
         try {
           const [p] = await searchProducts(item.name, locationId, 1);
           if (!p) return;
+          const description = [p.brand, p.description, p.size].filter(Boolean).join(" · ");
           await supabase
             .from("shopping_items")
             .update({
               kroger_upc: p.upc,
               kroger_product_id: p.productId,
-              kroger_description: [p.brand, p.description, p.size].filter(Boolean).join(" · "),
+              kroger_description: description,
               kroger_price: p.price,
             })
             .eq("id", item.id);
+          await remember(supabase, householdId, item.name, {
+            upc: p.upc,
+            product_id: p.productId,
+            description,
+            price: p.price,
+          });
         } catch {
           // leave unmatched; the user can search by hand
         }
@@ -83,8 +110,22 @@ export async function matchItems(formData: FormData) {
 }
 
 export async function chooseProduct(formData: FormData) {
-  const { supabase } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
   const price = Number(formData.get("price"));
+  const { data: it } = await supabase
+    .from("shopping_items")
+    .select("name, order_qty")
+    .eq("id", String(formData.get("id")))
+    .single();
+  if (it) {
+    await remember(supabase, householdId, it.name, {
+      upc: String(formData.get("upc")),
+      product_id: String(formData.get("product_id")),
+      description: String(formData.get("description")),
+      price: Number.isFinite(price) && price > 0 ? price : null,
+      order_qty: it.order_qty,
+    });
+  }
   await supabase
     .from("shopping_items")
     .update({
@@ -99,12 +140,21 @@ export async function chooseProduct(formData: FormData) {
 }
 
 export async function setQty(formData: FormData) {
-  const { supabase } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
   const qty = Math.min(50, Math.max(1, Math.round(Number(formData.get("qty")) || 1)));
-  await supabase
+  const { data: it } = await supabase
     .from("shopping_items")
     .update({ order_qty: qty, sent_at: null })
-    .eq("id", String(formData.get("id")));
+    .eq("id", String(formData.get("id")))
+    .select("name")
+    .single();
+  if (it) {
+    await supabase
+      .from("kroger_matches")
+      .update({ order_qty: qty })
+      .eq("household_id", householdId)
+      .eq("name_key", keyOf(it.name));
+  }
   revalidatePath("/shopping");
 }
 
