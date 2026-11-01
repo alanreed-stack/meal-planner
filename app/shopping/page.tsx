@@ -3,17 +3,38 @@ import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { addItem, deleteItem, generateList, toggleItem } from "./actions";
+import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
+import { searchStores, type Store } from "@/lib/kroger";
 
 const CATEGORIES = ["produce", "meat", "dairy", "bakery", "frozen", "pantry", "other"];
 
 export default async function ShoppingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ w?: string }>;
+  searchParams: Promise<{ w?: string; kroger?: string; n?: string; zip?: string }>;
 }) {
-  const { w } = await searchParams;
+  const { w, kroger, n, zip = "30307" } = await searchParams;
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
   const { supabase, householdId, inviteCode } = await requireHousehold();
+
+  const [{ data: hh }, { data: conn }] = await Promise.all([
+    supabase
+      .from("households")
+      .select("kroger_location_id, kroger_store_name")
+      .eq("id", householdId)
+      .single(),
+    supabase.from("kroger_connections").select("user_id").maybeSingle(),
+  ]);
+  const hasStore = !!hh?.kroger_location_id;
+  let stores: Store[] = [];
+  let storeError = false;
+  if (!hasStore) {
+    try {
+      stores = await searchStores(zip);
+    } catch {
+      storeError = true;
+    }
+  }
 
   const { data: week } = await supabase
     .from("weeks")
@@ -26,7 +47,7 @@ export default async function ShoppingPage({
     ? await Promise.all([
         supabase
           .from("shopping_items")
-          .select("id, name, qty, unit, category, to_order, manual")
+          .select("id, name, qty, unit, category, to_order, manual, kroger_upc, kroger_description, kroger_price, order_qty, sent_at")
           .eq("week_id", week.id)
           .order("name"),
         supabase
@@ -76,6 +97,96 @@ export default async function ShoppingPage({
           </p>
         )}
 
+
+        <section className="mb-5 rounded-xl border bg-white p-4 text-sm">
+          <h2 className="mb-2 font-semibold">Kroger</h2>
+          {kroger === "connected" && (
+            <p className="mb-2 rounded bg-green-50 px-2 py-1">Connected to your Kroger account.</p>
+          )}
+          {kroger === "error" && (
+            <p className="mb-2 rounded bg-red-50 px-2 py-1 text-red-700">
+              Couldn&apos;t connect to Kroger. Please try again.
+            </p>
+          )}
+          {kroger === "notconnected" && (
+            <p className="mb-2 rounded bg-amber-50 px-2 py-1">Connect your Kroger account first.</p>
+          )}
+          {kroger === "nothing" && (
+            <p className="mb-2 rounded bg-amber-50 px-2 py-1">
+              Nothing new to send. Match some items first.
+            </p>
+          )}
+          {kroger === "cartfail" && (
+            <p className="mb-2 rounded bg-red-50 px-2 py-1 text-red-700">
+              Kroger wouldn&apos;t take the cart. Try reconnecting.
+            </p>
+          )}
+          {kroger === "sent" && (
+            <p className="mb-2 rounded bg-green-50 px-2 py-1">
+              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart. Open the Kroger app or site to
+              review and check out.
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span>Account: {conn ? "connected ✓" : "not connected"}</span>
+            <a href="/api/kroger/connect" className="rounded border px-3 py-1">
+              {conn ? "Reconnect" : "Connect Kroger"}
+            </a>
+          </div>
+
+          <div className="mt-3">
+            {hasStore ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span>Store: {hh?.kroger_store_name}</span>
+                <form action={clearStore}>
+                  <button className="underline">change</button>
+                </form>
+              </div>
+            ) : (
+              <div>
+                <form className="mb-2 flex items-center gap-2">
+                  <input type="hidden" name="w" value={monday} />
+                  <label>Stores near</label>
+                  <input name="zip" defaultValue={zip} className="w-24 rounded border px-2 py-1" />
+                  <button className="rounded border px-2 py-1">Search</button>
+                </form>
+                {storeError && <p className="text-red-700">Store lookup failed. Try again.</p>}
+                <ul className="divide-y rounded border">
+                  {stores.map((s) => (
+                    <li key={s.id} className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="flex-1">
+                        {s.name}
+                        <span className="block text-xs text-neutral-500">{s.address}</span>
+                      </span>
+                      <form action={setStore}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <input type="hidden" name="name" value={`${s.name} (${s.address})`} />
+                        <button className="rounded bg-green-700 px-2 py-1 text-white">Use this store</button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {hasStore && list.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <form action={matchItems}>
+                <input type="hidden" name="week" value={monday} />
+                <button className="rounded border px-3 py-1.5">Match items to Kroger products</button>
+              </form>
+              <form action={sendToCart}>
+                <input type="hidden" name="week" value={monday} />
+                <button className="rounded bg-green-700 px-3 py-1.5 font-medium text-white">
+                  Send checked items to Kroger cart
+                </button>
+              </form>
+            </div>
+          )}
+        </section>
+
         {groups.map((g) => (
           <section key={g.category} className="mb-5">
             <h2 className="mb-1 text-sm font-semibold uppercase text-neutral-500">{g.category}</h2>
@@ -100,6 +211,37 @@ export default async function ShoppingPage({
                     {i.name}
                   </span>
                   {i.manual && <span className="rounded bg-neutral-100 px-1.5 text-xs">added</span>}
+                  {hasStore && i.to_order && (
+                    <div className="ml-2 flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-neutral-600">
+                      {i.kroger_upc ? (
+                        <span className="truncate" title={i.kroger_description ?? ""}>
+                          → {i.kroger_description}
+                          {i.kroger_price ? ` ($${Number(i.kroger_price).toFixed(2)})` : ""}
+                        </span>
+                      ) : (
+                        <span className="text-amber-700">no Kroger match yet</span>
+                      )}
+                      <Link href={`/shopping/match/${i.id}`} className="underline">
+                        {i.kroger_upc ? "change" : "find"}
+                      </Link>
+                      {i.kroger_upc && (
+                        <form action={setQty} className="flex items-center gap-1">
+                          <input type="hidden" name="id" value={i.id} />
+                          <input
+                            name="qty"
+                            type="number"
+                            min={1}
+                            max={50}
+                            defaultValue={i.order_qty}
+                            className="w-12 rounded border px-1 py-0.5"
+                            aria-label="Quantity to order"
+                          />
+                          <button className="underline">set</button>
+                        </form>
+                      )}
+                      {i.sent_at && <span className="rounded bg-green-100 px-1.5">in cart</span>}
+                    </div>
+                  )}
                   <form action={deleteItem} className="ml-auto">
                     <input type="hidden" name="id" value={i.id} />
                     <button aria-label="Delete" className="text-neutral-400 hover:text-red-700">
