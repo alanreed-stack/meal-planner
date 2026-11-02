@@ -64,6 +64,9 @@ export default async function RecipesPage({
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <h1 className="mr-auto text-2xl font-bold">Recipes</h1>
+          <Link href="/recipes/new" className="rounded-lg bg-green-700 px-3 py-1.5 text-sm text-white">
+            + Add recipe
+          </Link>
           <form className="flex gap-2">
             <input type="hidden" name="f" value={f} />
             <input
