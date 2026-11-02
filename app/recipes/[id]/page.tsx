@@ -1,7 +1,17 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+
+async function archiveRecipe(formData: FormData) {
+  "use server";
+  const { supabase } = await requireHousehold();
+  await supabase
+    .from("recipes")
+    .update({ archived: true, favorite: false })
+    .eq("id", String(formData.get("id")));
+  redirect("/recipes");
+}
 
 export default async function RecipePage({
   params,
@@ -56,6 +66,15 @@ export default async function RecipePage({
             <li key={i}>{s}</li>
           ))}
         </ol>
+
+        {!r.archived && (
+          <form action={archiveRecipe} className="mt-8 border-t pt-4">
+            <input type="hidden" name="id" value={r.id} />
+            <button className="text-sm text-red-700 underline">
+              Remove this recipe (you can restore it later)
+            </button>
+          </form>
+        )}
       </main>
     </>
   );

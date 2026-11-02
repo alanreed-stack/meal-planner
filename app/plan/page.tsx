@@ -22,7 +22,11 @@ export default async function PlanPage({
       .eq("household_id", householdId)
       .eq("week_start", monday)
       .maybeSingle(),
-    supabase.from("recipes").select("id, name, diet, favorite").order("name"),
+    supabase
+      .from("recipes")
+      .select("id, name, diet, favorite")
+      .eq("archived", false)
+      .order("name"),
   ]);
 
   const mode = (week?.mode ?? "home") as "home" | "travel";

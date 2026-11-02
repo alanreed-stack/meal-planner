@@ -12,12 +12,30 @@ async function toggleFavorite(formData: FormData) {
   revalidatePath("/recipes");
 }
 
+async function setArchived(formData: FormData) {
+  "use server";
+  const { supabase } = await requireHousehold();
+  await supabase
+    .from("recipes")
+    .update({ archived: formData.get("archive") === "true", favorite: false })
+    .eq("id", String(formData.get("id")));
+  revalidatePath("/recipes");
+}
+
+async function deleteForever(formData: FormData) {
+  "use server";
+  const { supabase } = await requireHousehold();
+  await supabase.from("recipes").delete().eq("id", String(formData.get("id")));
+  revalidatePath("/recipes");
+}
+
 const FILTERS = [
   { key: "all", label: "All" },
   { key: "favorites", label: "Favorites" },
   { key: "keto", label: "Keto-friendly" },
   { key: "family", label: "Family-only" },
   { key: "quick", label: "Quick" },
+  { key: "archived", label: "Removed" },
 ];
 
 export default async function RecipesPage({
@@ -31,6 +49,7 @@ export default async function RecipesPage({
   let query = supabase
     .from("recipes")
     .select("id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite")
+    .eq("archived", f === "archived")
     .order("name");
   if (f === "favorites") query = query.eq("favorite", true);
   if (f === "keto") query = query.eq("diet", "both");
@@ -84,6 +103,23 @@ export default async function RecipesPage({
                 </form>
               </div>
               <p className="mt-1 text-sm text-neutral-600">{r.description}</p>
+              {f === "archived" && (
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                  <form action={setArchived}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="archive" value="false" />
+                    <button className="rounded border px-2 py-1">Restore</button>
+                  </form>
+                  <details>
+                    <summary className="cursor-pointer text-red-700">Delete forever</summary>
+                    <form action={deleteForever} className="mt-2 flex items-center gap-2">
+                      <input type="hidden" name="id" value={r.id} />
+                      <span className="text-xs">This can&apos;t be undone.</span>
+                      <button className="rounded bg-red-700 px-2 py-1 text-white">Yes, delete</button>
+                    </form>
+                  </details>
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
                 <span className="rounded bg-green-100 px-2 py-0.5">
                   {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto" : "Family only"}
@@ -95,7 +131,11 @@ export default async function RecipesPage({
               </div>
             </li>
           ))}
-          {recipes?.length === 0 && <li className="text-neutral-500">No recipes match.</li>}
+          {recipes?.length === 0 && (
+            <li className="text-neutral-500">
+              {f === "archived" ? "Nothing has been removed." : "No recipes match."}
+            </li>
+          )}
         </ul>
       </main>
     </>
