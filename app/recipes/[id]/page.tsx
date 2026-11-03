@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { niceQty, proteinLbs, scaleFactor } from "@/lib/scale";
 
 async function archiveRecipe(formData: FormData) {
   "use server";
@@ -15,11 +16,24 @@ async function archiveRecipe(formData: FormData) {
 
 export default async function RecipePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ lbs?: string }>;
 }) {
   const { id } = await params;
-  const { supabase, inviteCode } = await requireHousehold();
+  const { lbs } = await searchParams;
+  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { data: hh } = await supabase
+    .from("households")
+    .select("default_protein_lbs")
+    .eq("id", householdId)
+    .single();
+  const asked = Number(lbs);
+  const target =
+    lbs && Number.isFinite(asked) && asked > 0
+      ? Math.min(10, Math.max(0.5, asked))
+      : Number(hh?.default_protein_lbs ?? 2);
 
   const { data: r } = await supabase.from("recipes").select("*").eq("id", id).maybeSingle();
   if (!r) notFound();
@@ -28,6 +42,11 @@ export default async function RecipePage({
     .select("*")
     .eq("recipe_id", id)
     .order("sort");
+
+  const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
+  const base = proteinLbs(list);
+  const factor = scaleFactor(list, target);
+  const scaled = base !== null && Math.abs(factor - 1) > 0.01;
 
   return (
     <>
@@ -39,7 +58,7 @@ export default async function RecipePage({
         <h1 className="mt-2 text-2xl font-bold">{r.name}</h1>
         <p className="text-neutral-600">{r.description}</p>
         <p className="mt-2 text-sm text-neutral-500">
-          Prep {r.prep_minutes} min · Cook {r.cook_minutes} min · Serves {r.servings} · {r.difficulty}
+          Prep {r.prep_minutes} min · Cook {r.cook_minutes} min · Serves about {Math.round(r.servings * factor)} · {r.difficulty}
         </p>
 
         {r.keto_swap && (
@@ -49,10 +68,36 @@ export default async function RecipePage({
         )}
 
         <h2 className="mt-6 text-lg font-semibold">Ingredients</h2>
+        {base !== null ? (
+          <form className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <label htmlFor="lbs">Make it with</label>
+            <input
+              id="lbs"
+              name="lbs"
+              type="number"
+              step="0.25"
+              min="0.5"
+              max="10"
+              defaultValue={target}
+              className="w-20 rounded border px-2 py-1"
+            />
+            <span>lb of meat</span>
+            <button className="rounded border px-2 py-1">Update</button>
+            <span className="text-xs text-neutral-500">
+              {scaled
+                ? `Scaled from ${Math.round(base * 100) / 100} lb as written (×${Math.round(factor * 100) / 100}).`
+                : "Matches the recipe as written."}
+            </span>
+          </form>
+        ) : (
+          <p className="mt-1 text-xs text-neutral-500">
+            This recipe has no weighed meat, so the amounts are as written.
+          </p>
+        )}
         <ul className="mt-2 space-y-1 text-sm">
-          {(ings ?? []).map((i) => (
+          {list.map((i) => (
             <li key={i.id}>
-              {i.qty ?? ""} {i.unit ?? ""} {i.name}
+              {i.qty != null ? niceQty(i.qty * factor, i.unit) : ""} {i.unit ?? ""} {i.name}
               {i.family_only && (
                 <span className="ml-2 rounded bg-amber-100 px-1.5 text-xs">family only</span>
               )}

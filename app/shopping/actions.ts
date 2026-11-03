@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
+import { niceQty, scaleFactor } from "@/lib/scale";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
  *  Items you added by hand are kept. Merges the same ingredient+unit across recipes. */
@@ -19,9 +20,15 @@ export async function generateList(formData: FormData) {
 
   const { data: meals } = await supabase
     .from("planned_meals")
-    .select("recipe_id")
+    .select("recipe_id, protein_lbs")
     .eq("week_id", week.id);
-  const recipeIds = (meals ?? []).map((m) => m.recipe_id).filter(Boolean) as string[];
+  const recipeIds = [...new Set((meals ?? []).map((m) => m.recipe_id).filter(Boolean) as string[])];
+  const { data: hh } = await supabase
+    .from("households")
+    .select("default_protein_lbs")
+    .eq("id", householdId)
+    .single();
+  const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
 
   // Keep the checkbox choices for items that survive regeneration.
   const { data: old } = await supabase
@@ -42,18 +49,29 @@ export async function generateList(formData: FormData) {
       .from("recipe_ingredients")
       .select("recipe_id, name, qty, unit, category")
       .in("recipe_id", recipeIds);
-    // A recipe planned twice needs its ingredients twice.
-    const timesPlanned = new Map<string, number>();
-    recipeIds.forEach((id) => timesPlanned.set(id, (timesPlanned.get(id) ?? 0) + 1));
+    const byRecipe = new Map<string, typeof ings>();
     for (const ing of ings ?? []) {
-      const k = key(ing.name, ing.unit);
-      const times = timesPlanned.get(ing.recipe_id) ?? 1;
-      const add = ing.qty == null ? null : Number(ing.qty) * times;
-      const cur = merged.get(k);
-      if (!cur) {
-        merged.set(k, { name: ing.name, unit: ing.unit, qty: add, category: ing.category });
-      } else if (add != null) {
-        cur.qty = (cur.qty ?? 0) + add;
+      const list = byRecipe.get(ing.recipe_id) ?? [];
+      list.push(ing);
+      byRecipe.set(ing.recipe_id, list);
+    }
+    // Each planned meal adds its own ingredients, scaled to that meal's meat weight.
+    for (const meal of meals ?? []) {
+      if (!meal.recipe_id) continue;
+      const list = byRecipe.get(meal.recipe_id) ?? [];
+      const factor = scaleFactor(
+        list.map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) })),
+        Number(meal.protein_lbs ?? defaultLbs)
+      );
+      for (const ing of list) {
+        const k = key(ing.name, ing.unit);
+        const add = ing.qty == null ? null : Number(ing.qty) * factor;
+        const cur = merged.get(k);
+        if (!cur) {
+          merged.set(k, { name: ing.name, unit: ing.unit, qty: add, category: ing.category });
+        } else if (add != null) {
+          cur.qty = (cur.qty ?? 0) + add;
+        }
       }
     }
   }
@@ -74,7 +92,7 @@ export async function generateList(formData: FormData) {
           week_id: week.id,
           name: v.name,
           unit: v.unit,
-          qty: v.qty == null ? null : Math.round(v.qty * 100) / 100,
+          qty: v.qty == null ? null : niceQty(v.qty, v.unit),
           category: v.category,
           to_order: !wasOff.has(k),
           manual: false,

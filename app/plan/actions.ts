@@ -66,7 +66,7 @@ export async function copyLastWeek(formData: FormData) {
   if (!prev) return;
   const { data: meals } = await supabase
     .from("planned_meals")
-    .select("day, slot, recipe_id")
+    .select("day, slot, recipe_id, protein_lbs")
     .eq("week_id", prev.id);
   if (!meals?.length) return;
   await supabase.from("planned_meals").insert(
@@ -76,8 +76,34 @@ export async function copyLastWeek(formData: FormData) {
       day: addDays(m.day, 7),
       slot: m.slot,
       recipe_id: m.recipe_id,
+      protein_lbs: m.protein_lbs,
     }))
   );
   await supabase.from("weeks").update({ mode: prev.mode }).eq("id", week.id);
   revalidatePath("/plan");
+}
+
+/** Sets the meat weight for one planned meal. Blank means "use the household usual". */
+export async function setMealProtein(formData: FormData) {
+  const { supabase } = await requireHousehold();
+  const raw = String(formData.get("lbs") ?? "").trim();
+  const n = Number(raw);
+  const lbs = raw === "" ? null : Number.isFinite(n) ? Math.min(10, Math.max(0.5, n)) : null;
+  await supabase
+    .from("planned_meals")
+    .update({ protein_lbs: lbs })
+    .eq("id", String(formData.get("id")));
+  revalidatePath("/plan");
+}
+
+export async function setDefaultProtein(formData: FormData) {
+  const { supabase, householdId } = await requireHousehold();
+  const n = Number(formData.get("lbs"));
+  if (!Number.isFinite(n)) return;
+  await supabase
+    .from("households")
+    .update({ default_protein_lbs: Math.min(10, Math.max(0.5, n)) })
+    .eq("id", householdId);
+  revalidatePath("/plan");
+  revalidatePath("/recipes", "layout");
 }

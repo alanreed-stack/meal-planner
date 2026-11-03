@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
-import { addMeal, copyLastWeek, removeMeal, setMode } from "./actions";
+import { addMeal, copyLastWeek, removeMeal, setDefaultProtein, setMealProtein, setMode } from "./actions";
+import { proteinLbs } from "@/lib/scale";
 
 const SLOTS = ["breakfast", "lunch", "dinner"] as const;
 
@@ -33,9 +34,33 @@ export default async function PlanPage({
   const { data: meals } = week
     ? await supabase
         .from("planned_meals")
-        .select("id, day, slot, recipe_id, recipes(name, diet)")
+        .select("id, day, slot, recipe_id, protein_lbs, recipes(name, diet)")
         .eq("week_id", week.id)
     : { data: [] };
+
+  const { data: hh } = await supabase
+    .from("households")
+    .select("default_protein_lbs")
+    .eq("id", householdId)
+    .single();
+  const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
+
+  // How much meat each planned recipe has as written, so we can show the scaling.
+  const plannedIds = [...new Set((meals ?? []).map((m) => m.recipe_id).filter(Boolean) as string[])];
+  const baseLbs = new Map<string, number>();
+  if (plannedIds.length) {
+    const { data: ings } = await supabase
+      .from("recipe_ingredients")
+      .select("recipe_id, name, qty, unit, category")
+      .in("recipe_id", plannedIds);
+    for (const id of plannedIds) {
+      const list = (ings ?? [])
+        .filter((i) => i.recipe_id === id)
+        .map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
+      const b = proteinLbs(list);
+      if (b) baseLbs.set(id, b);
+    }
+  }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const sortedRecipes = [...(recipes ?? [])].sort(
@@ -60,6 +85,25 @@ export default async function PlanPage({
             <button className="text-sm underline">Copy last week</button>
           </form>
         </div>
+
+        <form action={setDefaultProtein} className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <label htmlFor="default-lbs">Usual meat per meal:</label>
+          <input
+            id="default-lbs"
+            name="lbs"
+            type="number"
+            step="0.25"
+            min="0.5"
+            max="10"
+            defaultValue={defaultLbs}
+            className="w-20 rounded border px-2 py-1"
+          />
+          <span>lb</span>
+          <button className="rounded border px-2 py-1">Save</button>
+          <span className="text-xs text-neutral-500">
+            Recipes and shopping lists scale to this. You can change it for any single meal below.
+          </span>
+        </form>
 
         <form action={setMode} className="mb-5 flex gap-2 text-sm">
           <input type="hidden" name="week" value={monday} />
@@ -98,6 +142,24 @@ export default async function PlanPage({
                             <Link href={`/recipes/${m.recipe_id}`} className="hover:underline">
                               {r?.name ?? "(deleted recipe)"}
                             </Link>
+                            {m.recipe_id && baseLbs.has(m.recipe_id) && (
+                              <form action={setMealProtein} className="flex items-center gap-1 text-xs">
+                                <input type="hidden" name="id" value={m.id} />
+                                <input
+                                  name="lbs"
+                                  type="number"
+                                  step="0.25"
+                                  min="0.5"
+                                  max="10"
+                                  defaultValue={m.protein_lbs ?? ""}
+                                  placeholder={String(defaultLbs)}
+                                  aria-label="Pounds of meat"
+                                  className="w-14 rounded border px-1 py-0.5"
+                                />
+                                <span>lb</span>
+                                <button className="underline">set</button>
+                              </form>
+                            )}
                             {needsKeto && (
                               <span className="rounded bg-amber-100 px-1.5 text-xs">
                                 needs a keto option
