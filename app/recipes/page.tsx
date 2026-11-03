@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
 
 async function toggleFavorite(formData: FormData) {
   "use server";
@@ -9,6 +10,13 @@ async function toggleFavorite(formData: FormData) {
   const id = String(formData.get("id"));
   const next = formData.get("favorite") !== "true";
   await supabase.from("recipes").update({ favorite: next }).eq("id", id);
+  revalidatePath("/recipes");
+}
+
+async function addStarterRecipes() {
+  "use server";
+  const { supabase, householdId, user } = await requireHousehold();
+  await seedStarterRecipes(supabase, householdId, user.id);
   revalidatePath("/recipes");
 }
 
@@ -44,7 +52,8 @@ export default async function RecipesPage({
   searchParams: Promise<{ f?: string; q?: string }>;
 }) {
   const { f = "all", q = "" } = await searchParams;
-  const { supabase, inviteCode } = await requireHousehold();
+  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const missing = await missingStarterCount(supabase, householdId);
 
   let query = supabase
     .from("recipes")
@@ -77,6 +86,19 @@ export default async function RecipesPage({
             />
           </form>
         </div>
+        {/* threshold keeps the banner away if you delete a couple of starters for good */}
+        {missing >= 10 && f === "all" && (
+          <form
+            action={addStarterRecipes}
+            className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-3 text-sm"
+          >
+            <span className="flex-1">
+              {missing} more starter recipes are available: Peruvian, Asian, Indian, Greek, Italian
+              and more, all with keto and family versions.
+            </span>
+            <button className="rounded-lg bg-green-700 px-3 py-1.5 text-white">Add them</button>
+          </form>
+        )}
         <div className="mb-5 flex flex-wrap gap-2">
           {FILTERS.map((x) => (
             <Link

@@ -1,5 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import starter from "@/data/starter-recipes.json";
+import pack1 from "@/data/starter-recipes.json";
+import pack2 from "@/data/starter-recipes-2.json";
+
+const starter = [...pack1, ...pack2];
+
+/** How many starter recipes this household doesn't have yet. */
+export async function missingStarterCount(supabase: SupabaseClient, householdId: string) {
+  const { data } = await supabase.from("recipes").select("slug").eq("household_id", householdId);
+  const have = new Set((data ?? []).map((r) => r.slug));
+  return starter.filter((r) => !have.has(r.slug)).length;
+}
 
 type StarterIngredient = {
   name: string;
