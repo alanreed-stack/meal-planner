@@ -10,7 +10,18 @@ import { Sheet } from "./sheet";
  * A "⋯" button that opens a menu: a small popover on a computer, a bottom sheet on a phone.
  * Anything inside with a `data-menu-close` attribute closes the menu when tapped.
  */
-export function Menu({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
+export function Menu({
+  label,
+  title,
+  icon,
+  children,
+}: {
+  label: string;
+  title?: string;
+  /** Replaces the default ⋯ icon. */
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const phone = useIsPhone();
   const box = useRef<HTMLDivElement>(null);
@@ -46,7 +57,7 @@ export function Menu({ label, title, children }: { label: string; title?: string
   return (
     <div ref={box} className="relative">
       <IconButton label={label} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(!open)} compact>
-        <MoreHorizontal aria-hidden className="size-5" />
+        {icon ?? <MoreHorizontal aria-hidden className="size-5" />}
       </IconButton>
 
       {phone ? (

@@ -58,12 +58,17 @@ export function NavTabs() {
                   href={href}
                   aria-current={on ? "page" : undefined}
                   className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]",
+                    "relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]",
                     focus,
                     on ? "font-semibold text-primary-ink" : "text-muted"
                   )}
                 >
-                  <Icon aria-hidden className="size-6" />
+                  {/* A short bar above the active tab, so it is not only the color that changes. */}
+                  <span
+                    aria-hidden
+                    className={cn("absolute top-0 h-0.5 w-8 rounded-full", on ? "bg-primary" : "bg-transparent")}
+                  />
+                  <Icon aria-hidden className="size-6" strokeWidth={on ? 2.4 : 2} />
                   {label}
                 </Link>
               </li>

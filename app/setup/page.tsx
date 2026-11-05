@@ -1,3 +1,4 @@
+import { UtensilsCrossed } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { seedStarterRecipes } from "@/lib/seed-recipes";
@@ -45,7 +46,13 @@ export default async function SetupPage({
   const { error } = await searchParams;
   return (
     <main className="mx-auto w-full max-w-md space-y-6 px-4 py-10">
-      <h1 className="text-2xl font-bold">Set up your household</h1>
+      <div className="text-center">
+        <span className="mx-auto mb-3 flex size-14 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <UtensilsCrossed aria-hidden className="size-7" />
+        </span>
+        <h1 className="text-2xl font-bold">Set up your household</h1>
+        <p className="mt-1 text-sm text-muted">Start a new one, or join the one someone already made.</p>
+      </div>
       {error && <Notice tone="error">{error}</Notice>}
 
       <form action={create} className={cardStyles("default", true, "flex flex-col gap-4")}>
