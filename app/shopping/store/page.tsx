@@ -1,10 +1,12 @@
-import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
 import { mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { formatIngredient } from "@/lib/format";
 import { resetPicked } from "../actions";
 import { StoreList, type StoreItem } from "./store-list";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "In-store list" };
 
@@ -38,18 +40,20 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   }));
 
   return (
-    <div className="mx-auto w-full min-h-screen max-w-xl bg-white px-4 pb-20">
-      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-b bg-white/95 px-4 py-3 backdrop-blur">
-        <Link href={`/shopping?w=${monday}`} className="rounded border px-3 py-1.5 text-sm">
-          Back
-        </Link>
+    <div className="mx-auto min-h-screen w-full max-w-xl bg-background px-4 pb-20">
+      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-2 backdrop-blur">
+        <ButtonLink href={`/shopping?w=${monday}`} size="sm">
+          <ArrowLeft aria-hidden className="size-4" /> Back
+        </ButtonLink>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-bold">In-store list</h1>
-          <p className="text-xs text-neutral-500">{weekLabel(monday)}</p>
+          <p className="text-xs text-muted tabular-nums">{weekLabel(monday)}</p>
         </div>
         <form action={resetPicked}>
           <input type="hidden" name="week" value={monday} />
-          <button className="text-sm text-neutral-500 underline">Start over</button>
+          <SubmitButton variant="ghost" size="sm">
+            Start over
+          </SubmitButton>
         </form>
       </header>
       <StoreList items={items} order={CATEGORIES} />

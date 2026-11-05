@@ -3,6 +3,8 @@ import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, hourET, mondayOf, todayET } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, SectionHeader } from "@/components/ui/card";
 
 const KIND_LABEL: Record<string, string> = {
   leftovers: "Leftovers",
@@ -71,21 +73,21 @@ export default async function Home() {
           {displayName ? `, ${displayName}` : ""}
         </h1>
 
-        <section className="rounded-2xl border-2 border-green-600 bg-green-50/50 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-green-800">Tonight</h2>
+        <Card as="section" tone="accent">
+          <SectionHeader className="[&_h2]:text-primary-ink">Tonight</SectionHeader>
           {tonight.length === 0 && (
             <div className="mt-2">
               <p className="text-lg">Nothing planned for dinner yet.</p>
-              <Link href="/plan" className="mt-3 inline-block rounded-lg bg-green-700 px-4 py-2 font-medium text-white">
+              <ButtonLink href="/plan" variant="primary" className="mt-3">
                 Plan tonight
-              </Link>
+              </ButtonLink>
             </div>
           )}
           <ul className="mt-2 space-y-4">
             {tonight.map((m) => {
               if (m.kind !== "recipe" || !m.recipes) {
                 return (
-                  <li key={m.id} className="text-lg italic text-neutral-700">
+                  <li key={m.id} className="text-lg italic text-muted">
                     {KIND_LABEL[m.kind] ?? "Dinner"}
                   </li>
                 );
@@ -100,74 +102,65 @@ export default async function Home() {
                       src={m.recipes.image_url}
                       alt=""
                       referrerPolicy="no-referrer"
-                      className="mb-2 h-36 w-full rounded-xl object-cover"
+                      className="mb-2 h-36 w-full rounded-md object-cover"
                     />
                   )}
                   <p className="text-xl font-semibold">{m.recipes.name}</p>
-                  <p className="mt-1 text-sm text-neutral-700">
+                  <p className="mt-1 text-sm text-muted tabular-nums">
                     {formatMinutes(total)} total · start by{" "}
-                    <b className="text-green-800">{clockBefore(dinnerTime, total)}</b> for dinner at{" "}
+                    <b className="text-primary-ink">{clockBefore(dinnerTime, total)}</b> for dinner at{" "}
                     {clockBefore(dinnerTime, 0)}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link
-                      href={`/recipes/${m.recipe_id}/cook?lbs=${lbs}`}
-                      className="rounded-lg bg-green-700 px-4 py-2 font-medium text-white"
-                    >
+                    <ButtonLink href={`/recipes/${m.recipe_id}/cook?lbs=${lbs}`} variant="primary">
                       Start cooking
-                    </Link>
-                    <Link href={`/recipes/${m.recipe_id}?lbs=${lbs}`} className="rounded-lg border bg-white px-4 py-2">
-                      View recipe
-                    </Link>
+                    </ButtonLink>
+                    <ButtonLink href={`/recipes/${m.recipe_id}?lbs=${lbs}`}>View recipe</ButtonLink>
                   </div>
                 </li>
               );
             })}
           </ul>
-        </section>
+        </Card>
 
         {later.length > 0 && (
-          <section className="rounded-2xl border bg-white p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Coming up</h2>
-            <ul className="mt-2 divide-y">
+          <Card as="section">
+            <SectionHeader>Coming up</SectionHeader>
+            <ul className="mt-2 divide-y divide-border">
               {later.map((m) => (
                 <li key={m.id} className="flex items-baseline gap-3 py-2">
-                  <span className="w-24 shrink-0 text-sm text-neutral-500">{dow(m.day)}</span>
+                  <span className="w-24 shrink-0 text-sm text-muted">{dow(m.day)}</span>
                   {m.kind === "recipe" && m.recipe_id ? (
                     <Link href={`/recipes/${m.recipe_id}`} className="hover:underline">
                       {m.recipes?.name ?? "(deleted recipe)"}
                     </Link>
                   ) : (
-                    <span className="italic text-neutral-600">{KIND_LABEL[m.kind] ?? "Dinner"}</span>
+                    <span className="italic text-muted">{KIND_LABEL[m.kind] ?? "Dinner"}</span>
                   )}
                 </li>
               ))}
             </ul>
-          </section>
+          </Card>
         )}
 
-        <section className="rounded-2xl border bg-white p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Groceries</h2>
+        <Card as="section">
+          <SectionHeader>Groceries</SectionHeader>
           {toOrder.length === 0 ? (
-            <p className="mt-2 text-neutral-700">No shopping list for this week yet.</p>
+            <p className="mt-2">No shopping list for this week yet.</p>
           ) : (
-            <p className="mt-2 text-neutral-700">
+            <p className="mt-2 tabular-nums">
               {toOrder.length} item{toOrder.length === 1 ? "" : "s"} to order
               {inCart > 0 ? `, ${inCart} already in your Kroger cart` : ""}.
             </p>
           )}
-          <Link href="/shopping" className="mt-3 inline-block rounded-lg border px-4 py-2 text-sm">
+          <ButtonLink href="/shopping" className="mt-3">
             Open shopping list
-          </Link>
-        </section>
+          </ButtonLink>
+        </Card>
 
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Link href="/plan" className="rounded-lg border bg-white px-4 py-2">
-            Plan the week
-          </Link>
-          <Link href="/recipes/new" className="rounded-lg border bg-white px-4 py-2">
-            Add a recipe
-          </Link>
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink href="/plan">Plan the week</ButtonLink>
+          <ButtonLink href="/recipes/new">Add a recipe</ButtonLink>
         </div>
       </main>
     </>

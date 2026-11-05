@@ -1,7 +1,8 @@
 import { Nav } from "./nav";
+import { cn } from "@/lib/cn";
 
 export const Bar = ({ className = "" }: { className?: string }) => (
-  <div className={`animate-pulse rounded-lg bg-neutral-200 ${className}`} />
+  <div className={cn("animate-pulse rounded-md bg-surface-muted", className)} />
 );
 
 /** Placeholder shown while a page loads: the real header and tab bar, then grey blocks. */

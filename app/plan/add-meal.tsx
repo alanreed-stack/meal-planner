@@ -1,8 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Plus, Star, X } from "lucide-react";
 import { addMeal } from "./actions";
 import { formatMinutes } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Input, Select } from "@/components/ui/field";
+import { IconButton } from "@/components/ui/icon-button";
+import { RowButton } from "@/components/ui/row-button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export type PickerRecipe = {
   id: string;
@@ -59,18 +67,11 @@ export function AddMeal({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-3 rounded border px-3 py-1 text-sm hover:bg-neutral-50"
-      >
-        + Add meal
-      </button>
+      <Button className="mt-3" onClick={() => setOpen(true)}>
+        <Plus aria-hidden className="size-4" /> Add meal
+      </Button>
     );
   }
-
-  const chip = (on: boolean) =>
-    `rounded-full border px-2.5 py-0.5 text-xs ${on ? "bg-green-700 text-white" : "bg-white"}`;
 
   return (
     <form
@@ -79,88 +80,83 @@ export function AddMeal({
         setOpen(false);
         setQ("");
       }}
-      className="mt-3 rounded-lg border bg-neutral-50 p-3 text-sm"
+      className="mt-3 rounded-md border border-border bg-surface-muted p-3 text-sm"
     >
       <input type="hidden" name="week" value={week} />
       <input type="hidden" name="day" value={day} />
       <div className="mb-2 flex items-center gap-2">
-        <input
+        <Input
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search recipes…"
-          className="w-full min-w-0 flex-1 rounded border px-2 py-1"
+          aria-label="Search recipes"
+          className="w-full min-w-0 flex-1"
         />
-        <select name="slot" defaultValue="dinner" className="rounded border px-2 py-1" aria-label="Meal">
+        <Select name="slot" defaultValue="dinner" aria-label="Meal" className="w-auto">
           {SLOTS.map((s) => (
             <option key={s}>{s}</option>
           ))}
-        </select>
-        <button type="button" onClick={() => setOpen(false)} className="text-neutral-500" aria-label="Close">
-          ✕
-        </button>
+        </Select>
+        <IconButton label="Close" onClick={() => setOpen(false)}>
+          <X aria-hidden className="size-5" />
+        </IconButton>
       </div>
 
       <div className="mb-2 flex flex-wrap gap-1.5">
-        <button type="button" className={chip(fav)} onClick={() => setFav(!fav)}>
-          ★ Favorites
-        </button>
-        <button type="button" className={chip(quick)} onClick={() => setQuick(!quick)}>
+        <Chip on={fav} onClick={() => setFav(!fav)}>
+          <Star aria-hidden className="size-4" /> Favorites
+        </Chip>
+        <Chip on={quick} onClick={() => setQuick(!quick)}>
           Quick (30 min or less)
-        </button>
-        <button type="button" className={chip(both)} onClick={() => setBoth(!both)}>
+        </Chip>
+        <Chip on={both} onClick={() => setBoth(!both)}>
           Keto + family
-        </button>
+        </Chip>
         {PROTEINS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={chip(protein === p)}
-            onClick={() => setProtein(protein === p ? null : p)}
-          >
+          <Chip key={p} on={protein === p} onClick={() => setProtein(protein === p ? null : p)}>
             {p}
-          </button>
+          </Chip>
         ))}
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1.5 border-b pb-2">
-        <span className="mr-1 text-xs text-neutral-500">Not cooking:</span>
-        <button name="kind" value="leftovers" className="rounded border bg-white px-2.5 py-0.5 text-xs">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 border-b border-border pb-2">
+        <span className="mr-1 text-xs text-muted">Not cooking:</span>
+        <SubmitButton name="kind" value="leftovers" size="sm">
           Leftovers
-        </button>
-        <button name="kind" value="out" className="rounded border bg-white px-2.5 py-0.5 text-xs">
+        </SubmitButton>
+        <SubmitButton name="kind" value="out" size="sm">
           Eating out
-        </button>
-        <button name="kind" value="quick" className="rounded border bg-white px-2.5 py-0.5 text-xs">
+        </SubmitButton>
+        <SubmitButton name="kind" value="quick" size="sm">
           Sports night (quick)
-        </button>
+        </SubmitButton>
       </div>
 
-      <ul className="max-h-72 overflow-auto rounded border bg-white">
+      <ul className="max-h-72 overflow-auto rounded-sm border border-border bg-surface">
         {shown.map((r) => (
-          <li key={r.id} className="border-b last:border-b-0">
-            <button
+          <li key={r.id} className="border-b border-border last:border-b-0">
+            <RowButton
+              type="submit"
               name="recipe_id"
               value={r.id}
-              className="block min-h-11 w-full px-2 py-2 text-left hover:bg-green-50"
+              className="block min-h-11 w-full px-2 py-2 text-left hover:bg-primary-soft"
             >
-              <span className="block">
-                {r.f && <span className="mr-1 text-amber-500">★</span>}
+              <span className="flex items-center gap-1">
+                {r.f && <Star aria-label="Favorite" className="size-4 shrink-0 fill-current text-warning" />}
                 {r.n}
               </span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500">
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted tabular-nums">
                 <span>
                   {formatMinutes(r.m)}
                   {ago(r.w) ? ` · ${ago(r.w)}` : ""}
                 </span>
-                {mode === "home" && r.d === "family" && (
-                  <span className="rounded bg-amber-100 px-1.5 text-neutral-800">family only</span>
-                )}
+                {mode === "home" && r.d === "family" && <Badge tone="diet-family">family only</Badge>}
               </span>
-            </button>
+            </RowButton>
           </li>
         ))}
-        {shown.length === 0 && <li className="px-2 py-3 text-neutral-500">No recipes match.</li>}
+        {shown.length === 0 && <li className="px-2 py-3 text-muted">No recipes match.</li>}
       </ul>
     </form>
   );

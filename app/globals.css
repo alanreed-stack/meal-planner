@@ -1,28 +1,134 @@
 @import "tailwindcss";
 
+/*
+  Design tokens. Every color in the app comes from here, with a light and a dark value.
+  Pages use the semantic names (bg-surface, text-muted, border-border, ...) and never raw palette colors.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  color-scheme: light dark;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #ffffff;
+  --surface: #ffffff; /* cards */
+  --surface-muted: #f5f5f4; /* inset panels */
+  --border: #e2e2df;
+  --foreground: #171717;
+  --muted: #5c5c5c; /* secondary text */
+
+  --primary: #15803d;
+  --primary-foreground: #ffffff;
+  --primary-soft: #f0fdf4;
+  --primary-ink: #166534; /* green used as text or an icon on a surface */
+  --ring: #15803d;
+
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-ink: #991b1b;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  --warning-ink: #78350f;
+  --info: #1d4ed8;
+  --info-soft: #eff6ff;
+  --info-ink: #1e3a8a;
+
+  /* Diet colors, used anywhere a diet shows up. The base is readable as text on its -soft color. */
+  --diet-both: #166534;
+  --diet-both-soft: #dcfce7;
+  --diet-keto: #1e40af;
+  --diet-keto-soft: #dbeafe;
+  --diet-family: #92400e;
+  --diet-family-soft: #fef3c7;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
+    --surface: #161616;
+    --surface-muted: #222222;
+    --border: #333333;
     --foreground: #ededed;
+    --muted: #a3a3a3;
+
+    --primary: #15803d;
+    --primary-foreground: #ffffff;
+    --primary-soft: #11291a;
+    --primary-ink: #86efac;
+    --ring: #4ade80;
+
+    --danger: #dc2626;
+    --danger-soft: #3a1414;
+    --danger-ink: #fca5a5;
+    --warning: #f59e0b;
+    --warning-soft: #3a2a0a;
+    --warning-ink: #fcd34d;
+    --info: #3b82f6;
+    --info-soft: #10233f;
+    --info-ink: #93c5fd;
+
+    --diet-both: #86efac;
+    --diet-both-soft: #14301f;
+    --diet-keto: #93c5fd;
+    --diet-keto-soft: #11264a;
+    --diet-family: #fcd34d;
+    --diet-family-soft: #3a2a0a;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-ring: var(--ring);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+
+  --color-diet-both: var(--diet-both);
+  --color-diet-both-soft: var(--diet-both-soft);
+  --color-diet-keto: var(--diet-keto);
+  --color-diet-keto-soft: var(--diet-keto-soft);
+  --color-diet-family: var(--diet-family);
+  --color-diet-family-soft: var(--diet-family-soft);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Three corner sizes and nothing else: inputs and chips, buttons, cards. */
+@theme {
+  --radius-*: initial;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+}
+
+@layer base {
+  /* Tailwind v4 borders default to the text color; use the border token instead. */
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: var(--color-border);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Leave room for the bottom tab bar on phones, only on pages that have one. */

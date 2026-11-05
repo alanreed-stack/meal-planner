@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,45 +39,42 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto w-full flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-6 px-4">
       <div>
         <h1 className="text-3xl font-bold">Family Meal Planner</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-muted">
           {mode === "signin" ? "Sign in to plan the week." : "Create your login."}
         </p>
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border px-3 py-2"
-        />
-        <input
-          type="password"
-          required
-          minLength={8}
-          placeholder="Password (8+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border px-3 py-2"
-        />
-        <button
-          disabled={busy}
-          className="rounded-lg bg-green-700 px-3 py-2 font-medium text-white disabled:opacity-50"
-        >
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <Field label="Email">
+          <Input
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label="Password" hint="At least 8 characters.">
+          <Input
+            type="password"
+            required
+            minLength={8}
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+        <Button type="submit" variant="primary" size="lg" pending={busy}>
           {mode === "signin" ? "Sign in" : "Sign up"}
-        </button>
+        </Button>
       </form>
-      {msg && <p className="text-sm text-red-700">{msg}</p>}
-      <button
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="text-sm text-green-800 underline"
-      >
+      {msg && <Notice tone={msg.startsWith("Check your email") ? "info" : "error"}>{msg}</Notice>}
+      <Button variant="ghost" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
         {mode === "signin" ? "New here? Create a login" : "Have a login? Sign in"}
-      </button>
+      </Button>
     </main>
   );
 }

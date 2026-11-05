@@ -7,6 +7,14 @@ import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
 import { formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { todayET } from "@/lib/dates";
+import { Plus, Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Badge, DietBadge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ChipLink } from "@/components/ui/chip";
+import { Input } from "@/components/ui/field";
+import { SubmitIconButton } from "@/components/ui/icon-button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "Recipes" };
 
@@ -129,9 +137,6 @@ export default async function RecipesPage({
     const qs = params.toString();
     return qs ? `/recipes?${qs}` : "/recipes";
   };
-  const chip = (on: boolean) =>
-    `rounded-full border px-3 py-1 text-sm ${on ? "bg-green-700 text-white" : "bg-white"}`;
-
   const madeLabel = (id: string) => {
     const l = lastMade.get(id);
     if (!l) return "Never made";
@@ -148,127 +153,128 @@ export default async function RecipesPage({
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <h1 className="mr-auto text-2xl font-bold">Recipes</h1>
-          <Link href="/recipes/new" className="rounded-lg bg-green-700 px-3 py-1.5 text-sm text-white">
-            + Add recipe
-          </Link>
+          <ButtonLink href="/recipes/new" variant="primary">
+            <Plus aria-hidden className="size-4" /> Add recipe
+          </ButtonLink>
           <form className="flex gap-2">
             <input type="hidden" name="f" value={f} />
             <input type="hidden" name="p" value={p} />
             <input type="hidden" name="s" value={s} />
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder="Search"
-              className="rounded-lg border px-3 py-1.5 text-sm"
-            />
+            <Input name="q" defaultValue={q} placeholder="Search" aria-label="Search recipes" className="w-48" />
           </form>
         </div>
         {/* threshold keeps the banner away if you delete a couple of starters for good */}
         {missing >= 10 && f === "all" && (
           <form
             action={addStarterRecipes}
-            className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-3 text-sm"
+            className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3 text-sm"
           >
             <span className="flex-1">
               {missing} more starter recipes are available: Peruvian, Asian, Indian, Greek, Italian
               and more, all with keto and family versions.
             </span>
-            <button className="rounded-lg bg-green-700 px-3 py-1.5 text-white">Add them</button>
+            <SubmitButton variant="primary">Add them</SubmitButton>
           </form>
         )}
 
         <div className="mb-2 flex flex-wrap gap-2">
           {FILTERS.map((x) => (
-            <Link key={x.key} href={href({ f: x.key })} className={chip(f === x.key)}>
+            <ChipLink key={x.key} href={href({ f: x.key })} on={f === x.key}>
               {x.label}
-            </Link>
+            </ChipLink>
           ))}
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-neutral-500">Meat:</span>
+          <span className="text-xs text-muted">Meat:</span>
           {PROTEINS.map((x) => (
-            <Link key={x} href={href({ p: p === x ? "" : x })} className={chip(p === x)}>
+            <ChipLink key={x} href={href({ p: p === x ? "" : x })} on={p === x}>
               {x}
-            </Link>
+            </ChipLink>
           ))}
         </div>
         <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-neutral-500">Sort by:</span>
+          <span className="text-xs text-muted">Sort by:</span>
           {SORTS.map((x) => (
-            <Link key={x.key} href={href({ s: x.key })} className={chip(s === x.key)}>
+            <ChipLink key={x.key} href={href({ s: x.key })} on={s === x.key}>
               {x.label}
-            </Link>
+            </ChipLink>
           ))}
-          <span className="ml-auto text-xs text-neutral-500">
+          <span className="ml-auto text-xs text-muted tabular-nums">
             {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
           </span>
         </div>
 
         <ul className="grid gap-3 sm:grid-cols-2">
           {recipes.map((r) => (
-            <li key={r.id} className="overflow-hidden rounded-xl border bg-white">
-              {r.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={r.image_url}
-                  alt=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  className="h-36 w-full object-cover"
-                />
-              )}
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <Link href={`/recipes/${r.id}`} className="font-semibold hover:underline">
-                    {r.rating === 1 && <span title="Liked">👍 </span>}
-                    {r.rating === -1 && <span title="Not a fan">👎 </span>}
-                    {r.name}
-                  </Link>
-                  <form action={toggleFavorite}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <input type="hidden" name="favorite" value={String(r.favorite)} />
-                    <button aria-label="Toggle favorite" className="text-xl leading-none">
-                      {r.favorite ? "★" : "☆"}
-                    </button>
-                  </form>
-                </div>
-                <p className="mt-1 text-sm text-neutral-600">{r.description}</p>
-                {f === "archived" && (
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                    <form action={setArchived}>
-                      <input type="hidden" name="id" value={r.id} />
-                      <input type="hidden" name="archive" value="false" />
-                      <button className="rounded border px-2 py-1">Restore</button>
-                    </form>
-                    <details>
-                      <summary className="cursor-pointer text-red-700">Delete forever</summary>
-                      <form action={deleteForever} className="mt-2 flex items-center gap-2">
-                        <input type="hidden" name="id" value={r.id} />
-                        <span className="text-xs">This can&apos;t be undone.</span>
-                        <button className="rounded bg-red-700 px-2 py-1 text-white">Yes, delete</button>
-                      </form>
-                    </details>
-                  </div>
+            <li key={r.id}>
+              <Card padded={false} className="overflow-hidden">
+                {r.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.image_url}
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    className="h-36 w-full object-cover"
+                  />
                 )}
-                <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-                  <span className="rounded bg-green-100 px-2 py-0.5">
-                    {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto only" : "Family only"}
-                  </span>
-                  <span className="rounded bg-neutral-100 px-2 py-0.5">{formatMinutes(total(r))}</span>
-                  <span className="rounded bg-neutral-100 px-2 py-0.5">{r.difficulty}</span>
-                  <span className="rounded bg-neutral-100 px-2 py-0.5">{madeLabel(r.id)}</span>
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/recipes/${r.id}`}
+                      className="flex items-center gap-1.5 font-semibold hover:underline"
+                    >
+                      {r.rating === 1 && <ThumbsUp aria-label="Liked" className="size-4 shrink-0 text-primary-ink" />}
+                      {r.rating === -1 && <ThumbsDown aria-label="Not a fan" className="size-4 shrink-0 text-danger-ink" />}
+                      {r.name}
+                    </Link>
+                    <form action={toggleFavorite} className="-mr-2 -mt-2">
+                      <input type="hidden" name="id" value={r.id} />
+                      <input type="hidden" name="favorite" value={String(r.favorite)} />
+                      <SubmitIconButton
+                        label={r.favorite ? "Remove from favorites" : "Add to favorites"}
+                        pressed={r.favorite}
+                      >
+                        <Star aria-hidden className={r.favorite ? "size-5 fill-current" : "size-5"} />
+                      </SubmitIconButton>
+                    </form>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">{r.description}</p>
+                  {f === "archived" && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                      <form action={setArchived}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <input type="hidden" name="archive" value="false" />
+                        <SubmitButton>Restore</SubmitButton>
+                      </form>
+                      <details>
+                        <summary className="cursor-pointer py-2 text-danger-ink">Delete forever</summary>
+                        <form action={deleteForever} className="mt-2 flex items-center gap-2">
+                          <input type="hidden" name="id" value={r.id} />
+                          <span className="text-xs">This can&apos;t be undone.</span>
+                          <SubmitButton variant="danger">Yes, delete</SubmitButton>
+                        </form>
+                      </details>
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <DietBadge diet={r.diet} />
+                    <Badge className="tabular-nums">{formatMinutes(total(r))}</Badge>
+                    <Badge>{r.difficulty}</Badge>
+                    <Badge>{madeLabel(r.id)}</Badge>
+                  </div>
                 </div>
-              </div>
+              </Card>
             </li>
           ))}
           {recipes.length === 0 && (
-            <li className="text-neutral-500">
+            <li className="text-muted sm:col-span-2">
               {f === "archived" ? (
                 "Nothing has been removed."
               ) : (
                 <>
                   No recipes match.{" "}
-                  <Link href="/recipes" className="text-green-800 underline">
+                  <Link href="/recipes" className="text-primary-ink underline">
                     Clear filters
                   </Link>
                 </>

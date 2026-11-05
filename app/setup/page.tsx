@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { seedStarterRecipes } from "@/lib/seed-recipes";
+import { cardStyles } from "@/components/ui/card";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 async function create(formData: FormData) {
   "use server";
@@ -39,31 +43,37 @@ export default async function SetupPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const input = "rounded-lg border px-3 py-2";
-  const btn = "rounded-lg bg-green-700 px-3 py-2 font-medium text-white";
   return (
-    <main className="mx-auto w-full max-w-md space-y-8 px-4 py-10">
+    <main className="mx-auto w-full max-w-md space-y-6 px-4 py-10">
       <h1 className="text-2xl font-bold">Set up your household</h1>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <Notice tone="error">{error}</Notice>}
 
-      <form action={create} className="flex flex-col gap-3 rounded-xl border p-4">
+      <form action={create} className={cardStyles("default", true, "flex flex-col gap-4")}>
         <h2 className="font-semibold">I&apos;m first: create the household</h2>
-        <input name="name" placeholder="Household name (e.g. The Reeds)" className={input} />
-        <input name="display_name" required placeholder="Your name" className={input} />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="keto" /> I eat keto
+        <Field label="Household name">
+          <Input name="name" placeholder="e.g. The Reeds" />
+        </Field>
+        <Field label="Your name">
+          <Input name="display_name" required />
+        </Field>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="checkbox" name="keto" className="size-5 accent-primary" /> I eat keto
         </label>
-        <button className={btn}>Create and load starter recipes</button>
+        <SubmitButton variant="primary">Create and load starter recipes</SubmitButton>
       </form>
 
-      <form action={join} className="flex flex-col gap-3 rounded-xl border p-4">
+      <form action={join} className={cardStyles("default", true, "flex flex-col gap-4")}>
         <h2 className="font-semibold">Join with an invite code</h2>
-        <input name="code" required placeholder="Invite code" className={input} />
-        <input name="display_name" required placeholder="Your name" className={input} />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="keto" /> I eat keto
+        <Field label="Invite code">
+          <Input name="code" required />
+        </Field>
+        <Field label="Your name">
+          <Input name="display_name" required />
+        </Field>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="checkbox" name="keto" className="size-5 accent-primary" /> I eat keto
         </label>
-        <button className={btn}>Join</button>
+        <SubmitButton variant="primary">Join</SubmitButton>
       </form>
     </main>
   );

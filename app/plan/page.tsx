@@ -20,6 +20,13 @@ import {
 import { AddMeal, type PickerRecipe } from "./add-meal";
 import { FillWeek } from "./fill-week";
 import { ScrollToToday } from "./scroll-today";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Card, EmptyState } from "@/components/ui/card";
+import { Input, Select } from "@/components/ui/field";
+import { SubmitIconButton } from "@/components/ui/icon-button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "This week" };
 
@@ -186,109 +193,99 @@ export default async function PlanPage({
       <Nav />
       {weekHasToday && !w && <ScrollToToday />}
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Link href={`/plan?w=${addDays(monday, -7)}`} className="rounded border px-2 py-1">
-            ←
-          </Link>
-          <h1 className="text-xl font-bold">{weekLabel(monday)}</h1>
-          <Link href={`/plan?w=${addDays(monday, 7)}`} className="rounded border px-2 py-1">
-            →
-          </Link>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <ButtonLink href={`/plan?w=${addDays(monday, -7)}`} variant="secondary" aria-label="Previous week" className="px-3">
+            <ChevronLeft aria-hidden className="size-5" />
+          </ButtonLink>
+          <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          <ButtonLink href={`/plan?w=${addDays(monday, 7)}`} variant="secondary" aria-label="Next week" className="px-3">
+            <ChevronRight aria-hidden className="size-5" />
+          </ButtonLink>
           <span className="flex-1" />
           <form action={copyLastWeek}>
             <input type="hidden" name="week" value={monday} />
-            <button className="text-sm underline">Copy last week</button>
+            <SubmitButton variant="ghost">Copy last week</SubmitButton>
           </form>
         </div>
 
-        <form action={setMode} className="mb-3 flex flex-wrap gap-2 text-sm">
+        <form action={setMode} className="mb-3 flex flex-wrap gap-2">
           <input type="hidden" name="week" value={monday} />
-          <button
-            name="mode"
-            value="home"
-            className={`rounded-full border px-3 py-1 ${mode === "home" ? "bg-green-700 text-white" : "bg-white"}`}
-          >
+          <SubmitButton name="mode" value="home" variant={mode === "home" ? "primary" : "secondary"}>
             Home week (keto + family)
-          </button>
-          <button
-            name="mode"
-            value="travel"
-            className={`rounded-full border px-3 py-1 ${mode === "travel" ? "bg-green-700 text-white" : "bg-white"}`}
-          >
+          </SubmitButton>
+          <SubmitButton name="mode" value="travel" variant={mode === "travel" ? "primary" : "secondary"}>
             Travel week (family only)
-          </button>
+          </SubmitButton>
         </form>
 
         <form
           action={savePlanSettings}
-          className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm"
+          className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-muted p-3 text-sm"
         >
-          <label className="flex items-center gap-1.5">
+          <label className="flex items-center gap-2">
             Usual meat per meal
-            <input
+            <Input
               name="lbs"
               type="number"
               step="0.25"
               min="0.5"
               max="10"
               defaultValue={defaultLbs}
-              className="w-16 rounded border bg-white px-2 py-1"
+              className="w-20"
             />
             lb
           </label>
-          <label className="flex items-center gap-1.5">
+          <label className="flex items-center gap-2">
             Dinner at
-            <input
-              name="time"
-              type="time"
-              defaultValue={dinnerTime.slice(0, 5)}
-              className="rounded border bg-white px-2 py-1"
-            />
+            <Input name="time" type="time" defaultValue={dinnerTime.slice(0, 5)} className="w-auto" />
           </label>
-          <button className="rounded border bg-white px-2 py-1">Save</button>
+          <SubmitButton>Save</SubmitButton>
         </form>
 
         {(meals ?? []).length === 0 && (
-          <section className="mb-4 rounded-xl border border-dashed bg-white p-4 text-center">
-            <p className="text-lg font-semibold">A fresh week</p>
-            <p className="mt-1 text-sm text-neutral-600">
-              Nothing is planned yet. Let us suggest dinners with the button below, copy last week, or add
-              meals day by day.
-            </p>
-            <form action={copyLastWeek} className="mt-3">
-              <input type="hidden" name="week" value={monday} />
-              <button className="rounded-lg border px-4 py-2 text-sm">Copy last week</button>
-            </form>
-          </section>
+          <EmptyState
+            icon={<CalendarDays aria-hidden className="size-8" />}
+            title="A fresh week"
+            className="mb-4"
+            action={
+              <form action={copyLastWeek}>
+                <input type="hidden" name="week" value={monday} />
+                <SubmitButton>Copy last week</SubmitButton>
+              </form>
+            }
+          >
+            Nothing is planned yet. Let us suggest dinners with the button below, copy last week, or add meals
+            day by day.
+          </EmptyState>
         )}
 
         {rateQueue.length > 0 && (
-          <section className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
-            <h2 className="mb-2 font-semibold">How was dinner?</h2>
+          <Card as="section" className="mb-4 border-info/40 bg-info-soft p-3 text-sm">
+            <h2 className="mb-2 font-semibold text-info-ink">How was dinner?</h2>
             <ul className="space-y-2">
               {rateQueue.map((m) => (
                 <li key={m.id} className="flex flex-wrap items-center gap-2">
                   <span className="min-w-0 flex-1">
-                    <span className="text-neutral-500">{shortDay(m.day)}: </span>
+                    <span className="text-muted">{shortDay(m.day)}: </span>
                     {(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
                   </span>
                   <form action={rateMeal} className="flex items-center gap-1">
                     <input type="hidden" name="id" value={m.id} />
-                    <button name="rating" value="1" aria-label="Liked it" className="rounded border bg-white px-2.5 py-1">
-                      👍
-                    </button>
-                    <button name="rating" value="-1" aria-label="Not a fan" className="rounded border bg-white px-2.5 py-1">
-                      👎
-                    </button>
-                    <button name="rating" value="0" className="px-2 py-1 text-xs text-neutral-500 underline">
+                    <SubmitIconButton label="Liked it" variant="secondary" name="rating" value="1">
+                      <ThumbsUp aria-hidden className="size-5" />
+                    </SubmitIconButton>
+                    <SubmitIconButton label="Not a fan" variant="secondary" name="rating" value="-1">
+                      <ThumbsDown aria-hidden className="size-5" />
+                    </SubmitIconButton>
+                    <SubmitButton variant="ghost" size="sm" name="rating" value="0">
                       skip
-                    </button>
+                    </SubmitButton>
                   </form>
                 </li>
               ))}
             </ul>
-            {rateMore > 0 && <p className="mt-2 text-xs text-neutral-500">{rateMore} more after these.</p>}
-          </section>
+            {rateMore > 0 && <p className="mt-2 text-xs text-muted">{rateMore} more after these.</p>}
+          </Card>
         )}
 
         <FillWeek week={monday} input={fillInput} emptyDays={emptyDays} labels={labels} />
@@ -298,20 +295,16 @@ export default async function PlanPage({
             const dayMeals = (meals ?? []).filter((m) => m.day === day);
             const isToday = day === today;
             return (
-              <section
+              <Card
+                as="section"
                 key={day}
                 id={isToday ? "today" : undefined}
-                className={`scroll-mt-24 rounded-xl border bg-white p-4 ${
-                  isToday ? "border-2 border-green-600 bg-green-50/40" : ""
-                }`}
+                tone={isToday ? "accent" : "default"}
+                className="scroll-mt-24"
               >
                 <h2 className="flex items-center gap-2 font-semibold">
                   {dayLabel(day)}
-                  {isToday && (
-                    <span className="rounded-full bg-green-700 px-2 py-0.5 text-xs font-medium text-white">
-                      Today
-                    </span>
-                  )}
+                  {isToday && <Badge tone="success">Today</Badge>}
                 </h2>
                 <ul className="mt-2 space-y-2 text-sm">
                   {SLOTS.flatMap((slot) =>
@@ -343,23 +336,23 @@ export default async function PlanPage({
                         return (
                           <li key={m.id}>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="w-20 text-xs uppercase text-neutral-500">{slot}</span>
+                              <span className="w-20 text-xs text-muted uppercase">{slot}</span>
                               {off ? (
-                                <span className="italic text-neutral-600">{KIND_LABEL[m.kind]}</span>
+                                <span className="text-muted italic">{KIND_LABEL[m.kind]}</span>
                               ) : (
                                 <Link href={`/recipes/${m.recipe_id}`} className="hover:underline">
                                   {r?.name ?? "(deleted recipe)"}
                                 </Link>
                               )}
                               {longCook && (
-                                <span className="rounded bg-blue-50 px-1.5 text-xs text-blue-800">
+                                <Badge tone="info" className="tabular-nums">
                                   start by {clockBefore(dinnerTime, total)}
-                                </span>
+                                </Badge>
                               )}
                               {!off && m.recipe_id && baseLbs.has(m.recipe_id) && (
                                 <form action={setMealProtein} className="flex items-center gap-1 text-xs">
                                   <input type="hidden" name="id" value={m.id} />
-                                  <input
+                                  <Input
                                     name="lbs"
                                     type="number"
                                     step="0.25"
@@ -368,55 +361,55 @@ export default async function PlanPage({
                                     defaultValue={m.protein_lbs ?? ""}
                                     placeholder={String(defaultLbs)}
                                     aria-label="Pounds of meat"
-                                    className="w-14 rounded border px-1 py-0.5"
+                                    className="w-20"
                                   />
                                   <span>lb</span>
-                                  <button className="underline">set</button>
+                                  <SubmitButton variant="ghost" size="sm">
+                                    set
+                                  </SubmitButton>
                                 </form>
                               )}
-                              {needsKeto && (
-                                <span className="rounded bg-amber-100 px-1.5 text-xs">needs a keto option</span>
-                              )}
-                              <span className="ml-auto flex items-center gap-3">
+                              {needsKeto && <Badge tone="warning">needs a keto option</Badge>}
+                              <span className="ml-auto flex items-center gap-1">
                                 <details className="relative text-xs">
-                                  <summary className="cursor-pointer px-1 py-2 text-neutral-500 hover:text-neutral-800">
+                                  <summary className="flex min-h-11 cursor-pointer items-center rounded-sm px-2 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
                                     move
                                   </summary>
                                   <form
                                     action={moveMeal}
-                                    className="absolute right-0 z-10 mt-1 flex items-center gap-1 rounded border bg-white p-2 shadow"
+                                    className="absolute right-0 z-10 mt-1 flex items-center gap-2 rounded-md border border-border bg-surface p-2 shadow-lg"
                                   >
                                     <input type="hidden" name="id" value={m.id} />
-                                    <select name="day" defaultValue={m.day} className="rounded border px-1 py-0.5">
+                                    <Select name="day" defaultValue={m.day} aria-label="Move to day" className="w-auto">
                                       {days.map((d) => (
                                         <option key={d} value={d}>
                                           {shortDay(d)}
                                         </option>
                                       ))}
-                                    </select>
-                                    <button className="rounded bg-green-700 px-2 py-0.5 text-white">Go</button>
+                                    </Select>
+                                    <SubmitButton variant="primary">Go</SubmitButton>
                                   </form>
                                 </details>
                                 <form action={removeMeal}>
                                   <input type="hidden" name="id" value={m.id} />
-                                  <button aria-label="Remove" className="px-2 py-1.5 text-neutral-400 hover:text-red-700">
-                                    ✕
-                                  </button>
+                                  <SubmitIconButton label={`Remove ${r?.name ?? KIND_LABEL[m.kind] ?? "meal"}`} variant="danger">
+                                    <X aria-hidden className="size-5" />
+                                  </SubmitIconButton>
                                 </form>
                               </span>
                             </div>
                             {ideas.length > 0 && (
-                              <div className="ml-20 mt-1 flex flex-wrap items-center gap-2 text-xs">
-                                <span className="text-neutral-500">Keto plate with the same meat:</span>
+                              <div className="mt-1 ml-0 flex flex-wrap items-center gap-2 text-xs sm:ml-20">
+                                <span className="text-muted">Keto plate with the same meat:</span>
                                 {ideas.map((k) => (
                                   <form action={addMeal} key={k.id}>
                                     <input type="hidden" name="week" value={monday} />
                                     <input type="hidden" name="day" value={day} />
                                     <input type="hidden" name="slot" value={m.slot} />
                                     <input type="hidden" name="recipe_id" value={k.id} />
-                                    <button className="rounded-full border border-green-700 px-2 py-0.5 text-green-800 hover:bg-green-50">
-                                      + {k.name}
-                                    </button>
+                                    <SubmitButton size="sm">
+                                      <Plus aria-hidden className="size-4" /> {k.name}
+                                    </SubmitButton>
                                   </form>
                                 ))}
                               </div>
@@ -425,10 +418,10 @@ export default async function PlanPage({
                         );
                       })
                   )}
-                  {dayMeals.length === 0 && <li className="text-neutral-400">Nothing planned</li>}
+                  {dayMeals.length === 0 && <li className="text-muted">Nothing planned</li>}
                 </ul>
                 <AddMeal week={monday} day={day} mode={mode} recipes={pickerRecipes} />
-              </section>
+              </Card>
             );
           })}
         </div>

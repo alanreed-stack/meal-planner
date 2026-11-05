@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
@@ -11,6 +10,15 @@ import { similarTo } from "@/lib/similar";
 import { splitOptions } from "@/lib/match";
 import { addStaple } from "../settings/actions";
 import type { Metadata } from "next";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, ShoppingCart, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button, ButtonAnchor, ButtonLink } from "@/components/ui/button";
+import { Card, EmptyState, SectionHeader, cardStyles } from "@/components/ui/card";
+import { Input, Select } from "@/components/ui/field";
+import { SubmitIconButton } from "@/components/ui/icon-button";
+import { Notice } from "@/components/ui/notice";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "Shopping" };
 
@@ -127,133 +135,120 @@ export default async function ShoppingPage({
     <>
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Link href={`/shopping?w=${addDays(monday, -7)}`} className="rounded border px-2 py-1">
-            ←
-          </Link>
-          <h1 className="text-xl font-bold">Shopping: {weekLabel(monday)}</h1>
-          <Link href={`/shopping?w=${addDays(monday, 7)}`} className="rounded border px-2 py-1">
-            →
-          </Link>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <ButtonLink href={`/shopping?w=${addDays(monday, -7)}`} variant="secondary" aria-label="Previous week" className="px-3">
+            <ChevronLeft aria-hidden className="size-5" />
+          </ButtonLink>
+          <h1 className="text-xl font-bold tabular-nums">Shopping: {weekLabel(monday)}</h1>
+          <ButtonLink href={`/shopping?w=${addDays(monday, 7)}`} variant="secondary" aria-label="Next week" className="px-3">
+            <ChevronRight aria-hidden className="size-5" />
+          </ButtonLink>
         </div>
 
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4 text-sm">
+        <Card className="mb-5 flex flex-wrap items-center gap-3 text-sm">
           <form action={generateList}>
             <input type="hidden" name="week" value={monday} />
-            <button className="rounded bg-green-700 px-3 py-1.5 font-medium text-white">
+            <SubmitButton variant="primary">
               {list.length ? "Rebuild from this week's meals" : "Build list from this week's meals"}
-            </button>
+            </SubmitButton>
           </form>
-          <span className="text-neutral-600">
+          <span className="text-muted tabular-nums">
             {mealCount ?? 0} planned meal{mealCount === 1 ? "" : "s"} · {toOrder} of {list.length} items to
             order
             {priced.length > 0 && ` · about $${total.toFixed(2)}`}
           </span>
           {list.length > 0 && (
-            <Link href={`/shopping/store?w=${monday}`} className="ml-auto rounded border px-3 py-1.5">
+            <ButtonLink href={`/shopping/store?w=${monday}`} className="ml-auto">
               In-store checklist
-            </Link>
+            </ButtonLink>
           )}
-        </div>
+        </Card>
         {list.length > 0 && (
-          <p className="mb-4 text-xs text-neutral-500">
+          <p className="mb-4 text-xs text-muted">
             Checked items will be ordered. Uncheck anything you already have. Rebuilding keeps your
             checkboxes and the items you added yourself.
           </p>
         )}
 
-
-        <section className="mb-5 rounded-xl border bg-white p-4 text-sm">
-          <h2 className="mb-2 font-semibold">Kroger</h2>
-          {kroger === "connected" && (
-            <p className="mb-2 rounded bg-green-50 px-2 py-1">Connected to your Kroger account.</p>
-          )}
-          {kroger === "error" && (
-            <p className="mb-2 rounded bg-red-50 px-2 py-1 text-red-700">
-              Couldn&apos;t connect to Kroger. Please try again.
-            </p>
-          )}
-          {kroger === "notconnected" && (
-            <p className="mb-2 rounded bg-amber-50 px-2 py-1">Connect your Kroger account first.</p>
-          )}
+        <Card as="section" className="mb-5 space-y-3 text-sm">
+          <h2 className="font-semibold">Kroger</h2>
+          {kroger === "connected" && <Notice tone="success">Connected to your Kroger account.</Notice>}
+          {kroger === "error" && <Notice tone="error">Couldn&apos;t connect to Kroger. Please try again.</Notice>}
+          {kroger === "notconnected" && <Notice tone="warning">Connect your Kroger account first.</Notice>}
           {(kroger === "expired" || connExpired) && (
-            <p className="mb-2 rounded bg-amber-50 px-2 py-1">
-              Your Kroger connection expired, so nothing was sent. Nothing is lost.{" "}
-              <a href={`/api/kroger/connect?w=${monday}`} className="font-medium underline">
-                Reconnect Kroger
-              </a>{" "}
-              and try again.
-            </p>
+            <Notice
+              tone="warning"
+              action={
+                <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="secondary" size="sm">
+                  Reconnect Kroger
+                </ButtonAnchor>
+              }
+            >
+              Your Kroger connection expired, so nothing was sent. Nothing is lost.
+            </Notice>
           )}
-          {kroger === "nothing" && (
-            <p className="mb-2 rounded bg-amber-50 px-2 py-1">
-              Nothing new to send. Match some items first.
-            </p>
-          )}
+          {kroger === "nothing" && <Notice tone="warning">Nothing new to send. Match some items first.</Notice>}
           {kroger === "cartfail" && (
-            <p className="mb-2 rounded bg-red-50 px-2 py-1 text-red-700">
+            <Notice tone="error">
               Kroger didn&apos;t accept the cart, and nothing was marked as sent. Your login is fine. Try again in
               a minute, and check any rows marked &ldquo;low confidence&rdquo; or &ldquo;check quantity&rdquo;.
-            </p>
+            </Notice>
           )}
           {kroger === "sent" && (
-            <p className="mb-2 rounded bg-green-50 px-2 py-1">
-              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart.{" "}
-              <a
-                href="https://www.kroger.com/cart"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline"
-              >
-                Open my Kroger cart
-              </a>{" "}
-              to review and check out.
-            </p>
+            <Notice
+              tone="success"
+              action={
+                <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer" size="sm">
+                  Open my Kroger cart <ExternalLink aria-hidden className="size-4" />
+                </ButtonAnchor>
+              }
+            >
+              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart. Review and check out there.
+            </Notice>
           )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <span>Account: {conn ? "connected ✓" : "not connected"}</span>
-            <a
-              href="https://www.kroger.com/cart"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded border px-3 py-1"
-            >
-              Open Kroger cart ↗
-            </a>
-            <a href={`/api/kroger/connect?w=${monday}`} className="rounded border px-3 py-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-2">
+              Account: <Badge tone={conn ? "success" : "neutral"}>{conn ? "connected" : "not connected"}</Badge>
+            </span>
+            <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer">
+              Open Kroger cart <ExternalLink aria-hidden className="size-4" />
+            </ButtonAnchor>
+            <ButtonAnchor href={`/api/kroger/connect?w=${monday}`}>
               {conn ? "Reconnect" : "Connect Kroger"}
-            </a>
+            </ButtonAnchor>
           </div>
 
-          <div className="mt-3">
+          <div>
             {hasStore ? (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span>Store: {hh?.kroger_store_name}</span>
                 <form action={clearStore}>
-                  <button className="underline">change</button>
+                  <SubmitButton variant="ghost" size="sm">
+                    change
+                  </SubmitButton>
                 </form>
               </div>
             ) : (
               <div>
                 <form className="mb-2 flex items-center gap-2">
                   <input type="hidden" name="w" value={monday} />
-                  <label>Stores near</label>
-                  <input name="zip" defaultValue={zip} className="w-24 rounded border px-2 py-1" />
-                  <button className="rounded border px-2 py-1">Search</button>
+                  <label htmlFor="zip">Stores near</label>
+                  <Input id="zip" name="zip" defaultValue={zip} className="w-28" />
+                  <Button type="submit">Search</Button>
                 </form>
-                {storeError && <p className="text-red-700">Store lookup failed. Try again.</p>}
-                <ul className="divide-y rounded border">
+                {storeError && <Notice tone="error">Store lookup failed. Try again.</Notice>}
+                <ul className="divide-y divide-border rounded-md border border-border">
                   {stores.map((s) => (
-                    <li key={s.id} className="flex items-center gap-2 px-2 py-1.5">
+                    <li key={s.id} className="flex items-center gap-2 px-2 py-2">
                       <span className="flex-1">
                         {s.name}
-                        <span className="block text-xs text-neutral-500">{s.address}</span>
+                        <span className="block text-xs text-muted">{s.address}</span>
                       </span>
                       <form action={setStore}>
                         <input type="hidden" name="id" value={s.id} />
                         <input type="hidden" name="name" value={`${s.name} (${s.address})`} />
-                        <button className="rounded bg-green-700 px-2 py-1 text-white">Use this store</button>
+                        <SubmitButton variant="primary">Use this store</SubmitButton>
                       </form>
                     </li>
                   ))}
@@ -263,19 +258,17 @@ export default async function ShoppingPage({
           </div>
 
           {hasStore && list.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
               <form action={matchItems}>
                 <input type="hidden" name="week" value={monday} />
-                <button className="rounded border px-3 py-1.5">Match items to Kroger products</button>
+                <SubmitButton>Match items to Kroger products</SubmitButton>
               </form>
               <form action={sendToCart}>
                 <input type="hidden" name="week" value={monday} />
-                <button className="rounded bg-green-700 px-3 py-1.5 font-medium text-white">
-                  Send checked items to Kroger cart
-                </button>
+                <SubmitButton variant="primary">Send checked items to Kroger cart</SubmitButton>
               </form>
               {priced.length > 0 && (
-                <p className="w-full text-xs text-neutral-600">
+                <p className="w-full text-xs text-muted tabular-nums">
                   Estimated total <b>${total.toFixed(2)}</b> for {priced.length} priced item
                   {priced.length === 1 ? "" : "s"}
                   {unpriced > 0 ? `, plus ${unpriced} with no match yet` : ""}. Kroger&apos;s price per package
@@ -284,12 +277,12 @@ export default async function ShoppingPage({
               )}
             </div>
           )}
-        </section>
+        </Card>
 
         {groups.map((g) => (
           <section key={g.category} className="mb-5">
-            <h2 className="mb-1 text-sm font-semibold uppercase text-neutral-500">{g.category}</h2>
-            <ul className="divide-y rounded-xl border bg-white">
+            <SectionHeader className="mb-1">{g.category}</SectionHeader>
+            <Card as="ul" padded={false} className="divide-y divide-border">
               {g.rows.map((i) => {
                 const qty = i.qty == null ? null : Number(i.qty);
                 const pack = i.kroger_upc
@@ -300,36 +293,33 @@ export default async function ShoppingPage({
                 const isStaple = staples.has(i.name.trim().toLowerCase());
                 const needText = qty != null ? `Need ${formatAmount(qty, i.unit)}` : "";
                 return (
-                  <li key={i.id} className="px-3 py-2 text-sm">
-                    <div className="flex items-center gap-3">
+                  <li key={i.id} className="px-3 py-1 text-sm">
+                    <div className="flex items-center gap-1">
                       <form action={toggleItem}>
                         <input type="hidden" name="id" value={i.id} />
                         <input type="hidden" name="to_order" value={String(i.to_order)} />
-                        <button
-                          aria-label={i.to_order ? "Don't order" : "Order"}
-                          className={`h-8 w-8 rounded border text-sm ${
-                            i.to_order ? "bg-green-700 text-white" : "bg-white"
-                          }`}
+                        <SubmitIconButton
+                          label={i.to_order ? "Don't order" : "Order"}
+                          variant="secondary"
+                          pressed={i.to_order}
                         >
-                          {i.to_order ? "✓" : ""}
-                        </button>
+                          {i.to_order ? <Check aria-hidden className="size-5" /> : null}
+                        </SubmitIconButton>
                       </form>
-                      <span className={i.to_order ? "" : "text-neutral-400 line-through"}>
+                      <span className={cn("ml-2 tabular-nums", !i.to_order && "text-muted line-through")}>
                         {formatIngredient(qty, i.unit, i.name)}
                       </span>
-                      {i.manual && <span className="rounded bg-neutral-100 px-1.5 text-xs">added</span>}
+                      {i.manual && <Badge className="ml-1">added</Badge>}
                       <form action={deleteItem} className="ml-auto">
                         <input type="hidden" name="id" value={i.id} />
-                        <button aria-label="Delete" className="px-2 py-1.5 text-neutral-400 hover:text-red-700">
-                          ✕
-                        </button>
+                        <SubmitIconButton label={`Delete ${i.name}`} variant="danger">
+                          <X aria-hidden className="size-5" />
+                        </SubmitIconButton>
                       </form>
                     </div>
-                    {similar && (
-                      <p className="ml-9 mt-0.5 text-xs text-neutral-500">similar to {similar}</p>
-                    )}
-                    <details className="ml-9 mt-0.5 text-xs text-neutral-600">
-                      <summary className="cursor-pointer text-neutral-500 hover:text-neutral-800">
+                    {similar && <p className="ml-12 text-xs text-muted">similar to {similar}</p>}
+                    <details className="ml-12 text-xs text-muted">
+                      <summary className="min-h-8 cursor-pointer py-1 hover:text-foreground">
                         {uses.length
                           ? `for ${uses.length} meal${uses.length === 1 ? "" : "s"}`
                           : i.manual
@@ -337,7 +327,7 @@ export default async function ShoppingPage({
                             : "what's this for?"}
                         {isStaple && " · we always have this"}
                       </summary>
-                      <div className="mt-1 space-y-1">
+                      <div className="mt-1 space-y-1 pb-2">
                         {uses.length > 0 ? (
                           <p>{uses.join(", ")}</p>
                         ) : (
@@ -347,60 +337,56 @@ export default async function ShoppingPage({
                           <form action={addStaple}>
                             <input type="hidden" name="name" value={i.name} />
                             <input type="hidden" name="item_id" value={i.id} />
-                            <button className="underline">We always have this</button>
+                            <SubmitButton size="sm">We always have this</SubmitButton>
                           </form>
                         )}
                       </div>
                     </details>
                     {hasStore && i.to_order && (
-                      <div className="ml-9 mt-1 space-y-1 text-xs text-neutral-600">
+                      <div className="ml-12 space-y-1 pb-2 text-xs text-muted">
                         <div className="flex flex-wrap items-center gap-2">
                           {i.kroger_upc ? (
-                            <span title={i.kroger_description ?? ""}>
+                            <span title={i.kroger_description ?? ""} className="tabular-nums">
                               → {i.kroger_description}
                               {i.kroger_price
                                 ? ` ($${Number(i.kroger_price).toFixed(2)}${i.order_qty > 1 ? ` × ${i.order_qty}` : ""})`
                                 : ""}
                             </span>
                           ) : (
-                            <span className="text-amber-700">no Kroger match yet</span>
+                            <span className="text-warning-ink">no Kroger match yet</span>
                           )}
                           {i.match_confidence === "low" && (
-                            <span className="rounded bg-amber-100 px-1.5 text-amber-800">
-                              low confidence, check this
-                            </span>
+                            <Badge tone="warning">low confidence, check this</Badge>
                           )}
-                          <Link href={`/shopping/match/${i.id}`} className="underline">
+                          <ButtonLink href={`/shopping/match/${i.id}`} variant="ghost" size="sm">
                             {i.kroger_upc ? "change" : "find"}
-                          </Link>
+                          </ButtonLink>
                         </div>
                         {i.kroger_upc && (
                           <div className="flex flex-wrap items-center gap-2">
-                            <span>
+                            <span className="tabular-nums">
                               {i.order_qty_manual
                                 ? `${needText ? needText + " · " : ""}you set ${i.order_qty}`
                                 : pack?.note || `Buying ${i.order_qty}`}
                             </span>
-                            {!i.order_qty_manual && pack?.flag && (
-                              <span className="rounded bg-amber-100 px-1.5 text-amber-800">
-                                check quantity
-                              </span>
-                            )}
+                            {!i.order_qty_manual && pack?.flag && <Badge tone="warning">check quantity</Badge>}
                             <form action={setQty} className="flex items-center gap-1">
                               <input type="hidden" name="id" value={i.id} />
-                              <input
+                              <Input
                                 name="qty"
                                 type="number"
                                 min={1}
                                 max={50}
                                 defaultValue={i.order_qty_manual ? i.order_qty : ""}
                                 placeholder={String(i.order_qty)}
-                                className="w-12 rounded border px-1 py-0.5"
+                                className="w-20"
                                 aria-label="Packages to buy (empty for automatic)"
                               />
-                              <button className="underline">set</button>
+                              <SubmitButton variant="ghost" size="sm">
+                                set
+                              </SubmitButton>
                             </form>
-                            {i.sent_at && <span className="rounded bg-green-100 px-1.5">in cart</span>}
+                            {i.sent_at && <Badge tone="success">in cart</Badge>}
                           </div>
                         )}
                       </div>
@@ -408,37 +394,46 @@ export default async function ShoppingPage({
                   </li>
                 );
               })}
-            </ul>
+            </Card>
           </section>
         ))}
 
         {list.length === 0 && (
-          <div className="mb-5 rounded-xl border border-dashed bg-white p-6 text-center">
-            <p className="text-lg font-semibold">No list yet</p>
-            <p className="mt-1 text-sm text-neutral-600">
-              {(mealCount ?? 0) > 0
-                ? "You have meals planned. Tap “Build list from this week's meals” above."
-                : "Plan some dinners first, then the list builds itself from them."}
-            </p>
-            {(mealCount ?? 0) === 0 && (
-              <Link href={`/plan?w=${monday}`} className="mt-3 inline-block rounded-lg bg-green-700 px-4 py-2 text-sm text-white">
-                Plan this week
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            icon={<ShoppingCart aria-hidden className="size-8" />}
+            title="No list yet"
+            className="mb-5"
+            action={
+              (mealCount ?? 0) === 0 ? (
+                <ButtonLink href={`/plan?w=${monday}`} variant="primary">
+                  Plan this week
+                </ButtonLink>
+              ) : undefined
+            }
+          >
+            {(mealCount ?? 0) > 0
+              ? "You have meals planned. Tap “Build list from this week's meals” above."
+              : "Plan some dinners first, then the list builds itself from them."}
+          </EmptyState>
         )}
 
-        <form action={addItem} className="flex flex-wrap gap-2 rounded-xl border bg-white p-4 text-sm">
+        <form action={addItem} className={cardStyles("default", true, "flex flex-wrap gap-2 text-sm")}>
           <input type="hidden" name="week" value={monday} />
-          <input name="name" required placeholder="Add an item (milk, paper towels…)" className="w-full min-w-0 flex-1 rounded border px-2 py-1" />
-          <input name="qty" type="number" step="any" min="0" placeholder="Qty" className="w-16 rounded border px-2 py-1" />
-          <input name="unit" placeholder="Unit" className="w-20 rounded border px-2 py-1" />
-          <select name="category" defaultValue="other" className="rounded border px-2 py-1">
+          <Input
+            name="name"
+            required
+            placeholder="Add an item (milk, paper towels…)"
+            aria-label="Item name"
+            className="min-w-0 flex-1"
+          />
+          <Input name="qty" type="number" step="any" min="0" placeholder="Qty" aria-label="Quantity" className="w-20" />
+          <Input name="unit" placeholder="Unit" aria-label="Unit" className="w-24" />
+          <Select name="category" defaultValue="other" aria-label="Aisle" className="w-auto">
             {CATEGORIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
-          <button className="rounded bg-green-700 px-3 py-1 text-white">Add</button>
+          </Select>
+          <SubmitButton variant="primary">Add</SubmitButton>
         </form>
       </main>
     </>

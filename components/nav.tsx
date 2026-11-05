@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NavTabs } from "./nav-tabs";
+import { SubmitButton } from "./ui/submit-button";
 
 async function signOut() {
   "use server";
@@ -12,15 +13,20 @@ async function signOut() {
 
 export function Nav() {
   return (
-    <header className="border-b bg-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
-        <Link href="/" className="text-base font-bold text-green-800">
+    <header className="border-b border-border bg-surface">
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4 py-2 text-sm">
+        <Link
+          href="/"
+          className="rounded-sm py-2 text-base font-bold text-primary-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
           Meal Planner
         </Link>
         <NavTabs />
         <span className="flex-1" />
         <form action={signOut}>
-          <button className="rounded px-2 py-1.5 text-neutral-600 underline">Sign out</button>
+          <SubmitButton variant="ghost" size="sm">
+            Sign out
+          </SubmitButton>
         </form>
       </div>
     </header>

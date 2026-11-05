@@ -2,8 +2,11 @@
 
 import { useActionState } from "react";
 import { importRecipe, saveRecipe } from "./actions";
+import { Button } from "@/components/ui/button";
+import { cardStyles } from "@/components/ui/card";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
-const input = "w-full rounded-lg border px-3 py-2 text-sm";
 
 export type RecipeFormInitial = {
   id: string;
@@ -29,27 +32,24 @@ export function NewRecipeForm({ edit }: { edit?: RecipeFormInitial }) {
   return (
     <div className="space-y-8">
       {!edit && (
-        <form action={importAction} className="rounded-xl border bg-white p-4">
+        <form action={importAction} className={cardStyles()}>
           <h2 className="font-semibold">Import from a link</h2>
-          <p className="mb-3 text-sm text-neutral-600">
+          <p className="mb-3 text-sm text-muted">
             Paste a recipe page address. We&apos;ll fill in the form below so you can check it and save.
           </p>
           <div className="flex gap-2">
-            <input
+            <Input
               name="url"
               type="url"
               placeholder="https://www.allrecipes.com/recipe/..."
-              className={input}
+              aria-label="Recipe page address"
             />
-            <button
-              disabled={importing}
-              className="shrink-0 rounded-lg bg-green-700 px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
+            <Button type="submit" variant="primary" pending={importing} className="shrink-0">
               {importing ? "Reading…" : "Import"}
-            </button>
+            </Button>
           </div>
-          {imp.error && <p className="mt-2 text-sm text-red-700">{imp.error}</p>}
-          {d && <p className="mt-2 text-sm text-green-800">Imported. Check the details below, then save.</p>}
+          {imp.error && <Notice tone="error" className="mt-3">{imp.error}</Notice>}
+          {d && <Notice tone="success" className="mt-3">Imported. Check the details below, then save.</Notice>}
         </form>
       )}
 
@@ -57,133 +57,86 @@ export function NewRecipeForm({ edit }: { edit?: RecipeFormInitial }) {
       <form key={imp.n ?? "manual"} action={saveAction} className="space-y-4">
         <h2 className="font-semibold">{edit ? "Edit recipe" : "Recipe details"}</h2>
         {edit && <input type="hidden" name="recipe_id" value={edit.id} />}
-        <input
-          name="name"
-          required
-          placeholder="Recipe name"
-          defaultValue={d?.name ?? edit?.name}
-          className={input}
-        />
-        <input
-          name="description"
-          placeholder="Short description (optional)"
-          defaultValue={d?.description ?? edit?.description}
-          className={input}
-        />
+        <Field label="Recipe name">
+          <Input name="name" required defaultValue={d?.name ?? edit?.name} />
+        </Field>
+        <Field label="Short description (optional)">
+          <Input name="description" defaultValue={d?.description ?? edit?.description} />
+        </Field>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <label className="text-xs">
-            Prep (min)
-            <input
+          <Field label="Prep (min)">
+            <Input
               name="prep_minutes"
               type="number"
               min={0}
               defaultValue={d?.prep_minutes ?? edit?.prep_minutes ?? ""}
-              className={input}
             />
-          </label>
-          <label className="text-xs">
-            Cook (min)
-            <input
+          </Field>
+          <Field label="Cook (min)">
+            <Input
               name="cook_minutes"
               type="number"
               min={0}
               defaultValue={d?.cook_minutes ?? edit?.cook_minutes ?? ""}
-              className={input}
             />
-          </label>
-          <label className="text-xs">
-            Servings
-            <input
-              name="servings"
-              type="number"
-              min={1}
-              defaultValue={d?.servings ?? edit?.servings ?? 4}
-              className={input}
-            />
-          </label>
-          <label className="text-xs">
-            Difficulty
-            <select name="difficulty" defaultValue={edit?.difficulty ?? "easy"} className={input}>
+          </Field>
+          <Field label="Servings">
+            <Input name="servings" type="number" min={1} defaultValue={d?.servings ?? edit?.servings ?? 4} />
+          </Field>
+          <Field label="Difficulty">
+            <Select name="difficulty" defaultValue={edit?.difficulty ?? "easy"}>
               <option>easy</option>
               <option>medium</option>
               <option>hard</option>
-            </select>
-          </label>
+            </Select>
+          </Field>
         </div>
 
-        <label className="block text-xs">
-          Who is it for?
-          <select name="diet" defaultValue={edit?.diet ?? "both"} className={input}>
+        <Field label="Who is it for?">
+          <Select name="diet" defaultValue={edit?.diet ?? "both"}>
             <option value="both">Keto and family (with swaps)</option>
             <option value="family">Family only</option>
             <option value="keto">Keto only</option>
-          </select>
-        </label>
-        <label className="block text-xs">
-          Keto vs. family note (optional)
-          <input
+          </Select>
+        </Field>
+        <Field label="Keto vs. family note (optional)">
+          <Input
             name="keto_swap"
             defaultValue={edit?.keto_swap}
             placeholder="Keto: skip the bun, use lettuce. Family: regular buns."
-            className={input}
           />
-        </label>
+        </Field>
 
-        <label className="block text-xs">
-          Ingredients, one per line
-          <textarea
+        <Field
+          label="Ingredients, one per line"
+          hint="Start a line with + for family-only items (buns, rice, pasta) so they're still on the shopping list but the recipe knows they aren't for keto."
+        >
+          <Textarea
             name="ingredients"
             required
             rows={edit ? 12 : 8}
             defaultValue={d?.ingredients ?? edit?.ingredients}
             placeholder={"2 lb ground beef\n1 cup shredded cheddar\n+ 1 pack burger buns"}
-            className={input}
           />
-          <span className="text-neutral-500">
-            Start a line with + for family-only items (buns, rice, pasta) so they&apos;re still on the
-            shopping list but the recipe knows they aren&apos;t for keto.
-          </span>
-        </label>
+        </Field>
 
-        <label className="block text-xs">
-          Steps, one per line
-          <textarea
-            name="steps"
-            rows={edit ? 10 : 6}
-            defaultValue={d?.steps ?? edit?.steps}
-            className={input}
-          />
-        </label>
+        <Field label="Steps, one per line">
+          <Textarea name="steps" rows={edit ? 10 : 6} defaultValue={d?.steps ?? edit?.steps} />
+        </Field>
 
-        <label className="block text-xs">
-          Tags, separated by commas (optional)
-          <input
-            name="tags"
-            defaultValue={d?.tags ?? edit?.tags}
-            placeholder="quick, chicken, slow-cooker"
-            className={input}
-          />
-        </label>
+        <Field label="Tags, separated by commas (optional)">
+          <Input name="tags" defaultValue={d?.tags ?? edit?.tags} placeholder="quick, chicken, slow-cooker" />
+        </Field>
 
-        <label className="block text-xs">
-          Photo address (optional, must start with https://)
-          <input
-            name="image_url"
-            type="url"
-            defaultValue={d?.image ?? edit?.image_url ?? ""}
-            placeholder="https://…"
-            className={input}
-          />
-        </label>
+        <Field label="Photo address (optional)" hint="Must start with https://">
+          <Input name="image_url" type="url" defaultValue={d?.image ?? edit?.image_url ?? ""} placeholder="https://…" />
+        </Field>
 
-        {save?.error && <p className="text-sm text-red-700">{save.error}</p>}
-        <button
-          disabled={saving}
-          className="rounded-lg bg-green-700 px-4 py-2 font-medium text-white disabled:opacity-50"
-        >
+        {save?.error && <Notice tone="error">{save.error}</Notice>}
+        <Button type="submit" variant="primary" size="lg" pending={saving}>
           {saving ? "Saving…" : edit ? "Save changes" : "Save recipe"}
-        </button>
+        </Button>
       </form>
     </div>
   );

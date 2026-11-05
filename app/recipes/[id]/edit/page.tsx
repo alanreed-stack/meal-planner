@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { BackLink } from "@/components/ui/back-link";
 import { ingredientToLine } from "@/lib/ingredients";
 import { NewRecipeForm } from "../../new/form";
 
@@ -24,9 +24,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
     <>
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
-        <Link href={`/recipes/${id}`} className="text-sm text-green-800 underline">
-          ← Back to recipe
-        </Link>
+        <BackLink href={`/recipes/${id}`}>Back to recipe</BackLink>
         <h1 className="mb-4 mt-2 text-2xl font-bold">Edit: {r.name}</h1>
         <NewRecipeForm
           edit={{

@@ -1,7 +1,12 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { BackLink } from "@/components/ui/back-link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { searchProducts, type Product } from "@/lib/kroger";
 import { chooseProduct } from "../../kroger-actions";
 import { splitOptions } from "@/lib/match";
@@ -46,21 +51,25 @@ export default async function MatchPage({
     <>
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
-        <Link href="/shopping" className="text-sm text-green-800 underline">
-          ← Back to list
-        </Link>
+        <BackLink href="/shopping">Back to list</BackLink>
         <h1 className="mt-2 text-xl font-bold">Pick a Kroger product for: {item.name}</h1>
-        <form className="my-4 flex gap-2 text-sm">
-          <input name="q" defaultValue={term} className="w-full min-w-0 flex-1 rounded border px-2 py-1" />
-          <button className="rounded bg-green-700 px-3 py-1 text-white">Search</button>
+        <form className="my-4 flex gap-2">
+          <Input name="q" defaultValue={term} aria-label="Search Kroger products" className="min-w-0 flex-1" />
+          <Button type="submit" variant="primary">
+            Search
+          </Button>
         </form>
-        {failed && <p className="text-sm text-red-700">Kroger search failed. Try again.</p>}
-        <ul className="divide-y rounded-xl border bg-white">
+        {failed && (
+          <Notice tone="error" className="mb-3">
+            Kroger search failed. Try again.
+          </Notice>
+        )}
+        <Card as="ul" padded={false} className="divide-y divide-border">
           {results.map((p) => (
             <li key={p.upc} className="flex items-center gap-3 px-3 py-2 text-sm">
               <div className="min-w-0 flex-1">
                 <div className="truncate">{p.description}</div>
-                <div className="text-xs text-neutral-500">
+                <div className="text-xs text-muted tabular-nums">
                   {[p.brand, p.size].filter(Boolean).join(" · ")}
                   {p.price ? ` · $${p.price.toFixed(2)}` : ""}
                 </div>
@@ -76,14 +85,14 @@ export default async function MatchPage({
                 />
                 <input type="hidden" name="price" value={p.price ?? ""} />
                 <input type="hidden" name="size" value={p.size} />
-                <button className="rounded border px-2 py-1">Use this</button>
+                <SubmitButton>Use this</SubmitButton>
               </form>
             </li>
           ))}
           {results.length === 0 && !failed && (
-            <li className="px-3 py-3 text-neutral-500">No results. Try different words.</li>
+            <li className="px-3 py-3 text-muted">No results. Try different words.</li>
           )}
-        </ul>
+        </Card>
       </main>
     </>
   );

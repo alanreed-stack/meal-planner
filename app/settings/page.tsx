@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { X } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/field";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { SubmitIconButton } from "@/components/ui/icon-button";
 import { addStaple, addUsualStaples, removeStaple } from "./actions";
 import { CopyButton } from "./copy-button";
 
@@ -27,67 +33,62 @@ export default async function SettingsPage() {
 
         <section>
           <h2 className="text-lg font-semibold">Household</h2>
-          <p className="mb-3 text-sm text-neutral-600">
+          <p className="mb-3 text-sm text-muted">
             {householdName}. Anyone with this code can join and will see all of your recipes, plans and
             lists, so only share it with family.
           </p>
-          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3">
-            <span className="text-sm text-neutral-600">Invite code</span>
-            <code className="rounded bg-neutral-100 px-2 py-1 text-lg font-semibold tracking-wider">
+          <Card className="mb-3 flex flex-wrap items-center gap-3 p-3">
+            <span className="text-sm text-muted">Invite code</span>
+            <code className="rounded-sm bg-surface-muted px-2 py-1 text-lg font-semibold tracking-wider">
               {inviteCode}
             </code>
             <CopyButton text={inviteCode} />
-          </div>
-          <ul className="divide-y rounded-xl border bg-white text-sm">
+          </Card>
+          <Card as="ul" padded={false} className="divide-y divide-border text-sm">
             {(members ?? []).map((m) => (
-              <li key={m.user_id} className="flex items-center gap-2 px-3 py-2">
+              <li key={m.user_id} className="flex items-center gap-2 px-3 py-3">
                 <span className="flex-1">
                   {m.display_name || "Member"}
-                  {m.user_id === user.id && <span className="ml-2 text-xs text-neutral-500">(you)</span>}
+                  {m.user_id === user.id && <span className="ml-2 text-xs text-muted">(you)</span>}
                 </span>
-                <span className="text-xs text-neutral-500">{m.eats_keto ? "eats keto" : "eats regular"}</span>
+                <Badge tone={m.eats_keto ? "diet-keto" : "neutral"}>
+                  {m.eats_keto ? "eats keto" : "eats regular"}
+                </Badge>
               </li>
             ))}
-          </ul>
+          </Card>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold">Things we always have</h2>
-          <p className="mb-3 text-sm text-neutral-600">
+          <p className="mb-3 text-sm text-muted">
             These come off the shopping list unchecked, so you don&apos;t reorder olive oil every week. You can
             still check one on for a week when you run out. The name has to match the ingredient name, for
             example &ldquo;olive oil&rdquo;.
           </p>
 
-          <ul className="mb-3 divide-y rounded-xl border bg-white">
+          <Card as="ul" padded={false} className="mb-3 divide-y divide-border">
             {(staples ?? []).map((s) => (
-              <li key={s.name_key} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <li key={s.name_key} className="flex items-center gap-3 py-1 pl-3 pr-1 text-sm">
                 <span className="flex-1">{s.name}</span>
                 <form action={removeStaple}>
                   <input type="hidden" name="name_key" value={s.name_key} />
-                  <button className="text-neutral-400 hover:text-red-700" aria-label={`Remove ${s.name}`}>
-                    ✕
-                  </button>
+                  <SubmitIconButton label={`Remove ${s.name}`} variant="danger">
+                    <X aria-hidden className="size-5" />
+                  </SubmitIconButton>
                 </form>
               </li>
             ))}
-            {(staples ?? []).length === 0 && (
-              <li className="px-3 py-3 text-sm text-neutral-500">Nothing yet.</li>
-            )}
-          </ul>
+            {(staples ?? []).length === 0 && <li className="px-3 py-3 text-sm text-muted">Nothing yet.</li>}
+          </Card>
 
-          <form action={addStaple} className="mb-3 flex gap-2 text-sm">
-            <input
-              name="name"
-              required
-              placeholder="Add one (e.g. paprika)"
-              className="w-full min-w-0 flex-1 rounded border px-2 py-1.5"
-            />
-            <button className="rounded bg-green-700 px-3 py-1.5 text-white">Add</button>
+          <form action={addStaple} className="mb-3 flex gap-2">
+            <Input name="name" required placeholder="Add one (e.g. paprika)" className="min-w-0 flex-1" aria-label="Item to add" />
+            <SubmitButton variant="primary">Add</SubmitButton>
           </form>
 
           <form action={addUsualStaples}>
-            <button className="rounded border px-3 py-1.5 text-sm">Add the usual spices, oils and sauces</button>
+            <SubmitButton>Add the usual spices, oils and sauces</SubmitButton>
           </form>
         </section>
       </main>
