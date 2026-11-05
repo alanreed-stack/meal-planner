@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shuffle, Sparkles, Star } from "lucide-react";
+import { Info, Shuffle, Sparkles, Star } from "lucide-react";
 import { keepFill } from "./actions";
 import { proposeFill, reshuffleDay, type Cand, type FillInput } from "@/lib/autofill";
 import { formatMinutes } from "@/lib/format";
@@ -22,6 +22,7 @@ export function FillWeek({
   labels: Record<string, string>;
 }) {
   const [draft, setDraft] = useState<Record<string, Cand | null> | null>(null);
+  const [why, setWhy] = useState(false);
 
   if (emptyDays.length === 0) return null;
 
@@ -40,29 +41,53 @@ export function FillWeek({
 
   return (
     <Card as="section" tone="accent" className="mb-5 text-sm">
-      <h2 className="font-semibold">Suggested dinners (nothing is saved yet)</h2>
-      <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface">
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <h2 className="font-semibold">Suggested dinners</h2>
+          <p className="text-muted">Nothing is saved until you tap Keep.</p>
+        </div>
+        <IconButton
+          label="How these are picked"
+          aria-expanded={why}
+          pressed={why}
+          onClick={() => setWhy(!why)}
+          className="-mt-1 -mr-1"
+        >
+          <Info aria-hidden className="size-5" />
+        </IconButton>
+      </div>
+      {why && (
+        <p className="mt-2 rounded-md bg-surface p-3 text-muted">
+          Skips anything you&apos;ve had in the last 3 weeks, avoids the same meat two nights in a row, and leans
+          toward your favorites.{" "}
+          {input.mode === "home"
+            ? "Family-only meals are left out of home weeks."
+            : "Keto-only meals are left out of travel weeks."}
+        </p>
+      )}
+
+      <ul className="mt-3 divide-y divide-border rounded-md border border-border bg-surface">
         {emptyDays.map((d) => {
           const c = draft[d];
           return (
-            <li key={d} className="flex items-center gap-2 py-1 pl-2 pr-1">
-              <span className="w-24 shrink-0 text-xs text-muted">{labels[d]}</span>
-              <span className="min-w-0 flex-1">
+            <li key={d} className="flex items-center gap-2 py-1 pr-1 pl-3">
+              <div className="min-w-0 flex-1 py-1">
+                <p className="text-xs text-muted">{labels[d]}</p>
                 {c ? (
                   <>
-                    {c.favorite && (
-                      <Star aria-label="Favorite" className="mr-1 inline size-4 fill-current text-warning" />
-                    )}
-                    {c.name}
-                    <span className="ml-2 text-xs text-muted tabular-nums">
+                    <p className="flex items-center gap-1.5 text-base font-medium">
+                      {c.favorite && <Star aria-label="Favorite" className="size-4 shrink-0 fill-current text-warning" />}
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-muted tabular-nums">
                       {formatMinutes(c.minutes)}
                       {c.protein !== "none" ? ` · ${c.protein}` : ""}
-                    </span>
+                    </p>
                   </>
                 ) : (
-                  <span className="text-muted">No recipe fits, plan this one by hand.</span>
+                  <p className="text-muted">No recipe fits, plan this one by hand.</p>
                 )}
-              </span>
+              </div>
               <IconButton
                 label={`Pick a different one for ${labels[d]}`}
                 variant="secondary"
@@ -74,8 +99,10 @@ export function FillWeek({
           );
         })}
       </ul>
-      <div className="mt-3 flex flex-wrap gap-2">
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row-reverse">
         <form
+          className="sm:flex-1"
           action={async (fd) => {
             await keepFill(fd);
             setDraft(null);
@@ -83,20 +110,19 @@ export function FillWeek({
         >
           <input type="hidden" name="week" value={week} />
           <input type="hidden" name="picks" value={JSON.stringify(picks)} />
-          <SubmitButton variant="primary" disabled={picks.length === 0}>
-            Keep these
+          <SubmitButton variant="primary" size="lg" className="w-full" disabled={picks.length === 0}>
+            Keep these {picks.length} dinner{picks.length === 1 ? "" : "s"}
           </SubmitButton>
         </form>
-        <Button onClick={() => setDraft(proposeFill(input, emptyDays))}>Start over</Button>
-        <Button variant="ghost" onClick={() => setDraft(null)}>
-          Cancel
-        </Button>
+        <div className="flex gap-2">
+          <Button className="flex-1" onClick={() => setDraft(proposeFill(input, emptyDays))}>
+            Start over
+          </Button>
+          <Button variant="ghost" className="flex-1" onClick={() => setDraft(null)}>
+            Cancel
+          </Button>
+        </div>
       </div>
-      <p className="mt-2 text-xs text-muted">
-        Skips anything you&apos;ve had in the last 3 weeks, avoids the same meat two nights in a row, and leans
-        toward your favorites.{" "}
-        {input.mode === "home" ? "Family-only meals are left out of home weeks." : "Keto-only meals are left out of travel weeks."}
-      </p>
     </Card>
   );
 }

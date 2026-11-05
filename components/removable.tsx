@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, type ElementType, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useToast } from "@/components/ui/toast";
 
@@ -65,5 +66,15 @@ export function RemoveTrigger({ label }: { label: string }) {
     <IconButton label={label} variant="danger" onClick={() => remove?.()}>
       <X aria-hidden className="size-5" />
     </IconButton>
+  );
+}
+
+/** "Remove" as a row inside a ⋯ menu. Same undo behavior as the ✕. */
+export function RemoveMenuItem({ label = "Remove" }: { label?: string }) {
+  const remove = useContext(RemoveContext);
+  return (
+    <Button variant="danger" className="w-full" data-menu-close onClick={() => remove?.()}>
+      <Trash2 aria-hidden className="size-4" /> {label}
+    </Button>
   );
 }

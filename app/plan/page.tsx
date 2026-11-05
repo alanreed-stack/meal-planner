@@ -1,36 +1,31 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
-import { clockBefore } from "@/lib/format";
+import { clockBefore, formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { proteinLbs } from "@/lib/scale";
 import type { Cand, FillInput } from "@/lib/autofill";
-import {
-  addMeal,
-  copyLastWeek,
-  moveMeal,
-  removeMeal,
-  savePlanSettings,
-  setMealProtein,
-  setMode,
-} from "./actions";
-import { AddMeal, type PickerRecipe } from "./add-meal";
-import { FillWeek } from "./fill-week";
-import { ScrollToToday } from "./scroll-today";
-import { RateRow } from "./rate-row";
-import { Removable, RemoveTrigger } from "@/components/removable";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Removable, RemoveMenuItem } from "@/components/removable";
+import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, EmptyState } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import { IconLink } from "@/components/ui/icon-link";
+import { Menu } from "@/components/ui/menu";
+import { Segmented } from "@/components/ui/segmented";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { addMeal, copyLastWeek, moveMeal, removeMeal, setMealProtein, setMode } from "./actions";
+import { AddMeal, type PickerRecipe } from "./add-meal";
+import { DayPills } from "./day-pills";
+import { FillWeek } from "./fill-week";
+import { RateRow } from "./rate-row";
+import { ScrollToToday } from "./scroll-today";
 
 export const metadata: Metadata = { title: "This week" };
 
-const SLOTS = ["breakfast", "lunch", "dinner"] as const;
 const KIND_LABEL: Record<string, string> = {
   leftovers: "Leftovers",
   out: "Eating out",
@@ -155,7 +150,8 @@ export default async function PlanPage({
     .gte("day", addDays(today, -7))
     .lt("day", today)
     .order("day", { ascending: false });
-  const rateQueue = (toRate ?? []).slice(0, 3);
+  // One compact card, one dinner at a time.
+  const rateQueue = (toRate ?? []).slice(0, 1);
   const rateMore = (toRate ?? []).length - rateQueue.length;
 
   const dinners = (meals ?? []).filter((m) => m.slot === "dinner");
@@ -187,20 +183,30 @@ export default async function PlanPage({
   };
 
   const weekHasToday = days.includes(today);
+  const thisMonday = mondayOf(today);
+  const plannedDays = new Set(dinners.map((m) => m.day));
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const SLOT_LABEL: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" };
 
   return (
     <>
       <Nav />
-      {weekHasToday && !w && <ScrollToToday />}
+      {weekHasToday && !w && <ScrollToToday targetId={`day-${today}`} />}
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <ButtonLink href={`/plan?w=${addDays(monday, -7)}`} variant="secondary" aria-label="Previous week" className="px-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <IconLink href={`/plan?w=${addDays(monday, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />
-          </ButtonLink>
+          </IconLink>
           <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
-          <ButtonLink href={`/plan?w=${addDays(monday, 7)}`} variant="secondary" aria-label="Next week" className="px-3">
+          <IconLink href={`/plan?w=${addDays(monday, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
-          </ButtonLink>
+          </IconLink>
+          {monday !== thisMonday && (
+            <ButtonLink href="/plan" variant="ghost">
+              This week
+            </ButtonLink>
+          )}
           <span className="flex-1" />
           <form action={copyLastWeek}>
             <input type="hidden" name="week" value={monday} />
@@ -208,39 +214,41 @@ export default async function PlanPage({
           </form>
         </div>
 
-        <form action={setMode} className="mb-3 flex flex-wrap gap-2">
+        <form action={setMode} className="mb-2">
           <input type="hidden" name="week" value={monday} />
-          <SubmitButton name="mode" value="home" variant={mode === "home" ? "primary" : "secondary"}>
-            Home week (keto + family)
-          </SubmitButton>
-          <SubmitButton name="mode" value="travel" variant={mode === "travel" ? "primary" : "secondary"}>
-            Travel week (family only)
-          </SubmitButton>
+          <Segmented
+            label="Kind of week"
+            name="mode"
+            value={mode}
+            options={[
+              { value: "home", label: "Home week" },
+              { value: "travel", label: "Travel week" },
+            ]}
+          />
         </form>
+        <p className="mb-4 text-sm text-muted tabular-nums">
+          {mode === "home" ? "Keto and family dinners." : "Family-only dinners."} Dinner at{" "}
+          {clockBefore(dinnerTime, 0)} · {defaultLbs} lb meat per meal ·{" "}
+          <Link href="/settings#household" className="text-primary-ink underline">
+            change
+          </Link>
+        </p>
 
-        <form
-          action={savePlanSettings}
-          className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-muted p-3 text-sm"
-        >
-          <label className="flex items-center gap-2">
-            Usual meat per meal
-            <Input
-              name="lbs"
-              type="number"
-              step="0.25"
-              min="0.5"
-              max="10"
-              defaultValue={defaultLbs}
-              className="w-20"
-            />
-            lb
-          </label>
-          <label className="flex items-center gap-2">
-            Dinner at
-            <Input name="time" type="time" defaultValue={dinnerTime.slice(0, 5)} className="w-auto" />
-          </label>
-          <SubmitButton>Save</SubmitButton>
-        </form>
+        {rateQueue.length > 0 && (
+          <Card as="section" id="rate-card" className="mb-4 border-info/40 bg-info-soft p-3 not-has-[li]:hidden">
+            <ul>
+              {rateQueue.map((m) => (
+                <RateRow
+                  key={m.id}
+                  id={m.id}
+                  when={shortDay(m.day).split(",")[0]}
+                  name={(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
+                  more={rateMore}
+                />
+              ))}
+            </ul>
+          </Card>
+        )}
 
         {(meals ?? []).length === 0 && (
           <EmptyState
@@ -259,34 +267,25 @@ export default async function PlanPage({
           </EmptyState>
         )}
 
-        {rateQueue.length > 0 && (
-          <Card as="section" id="rate-card" className="mb-4 border-info/40 bg-info-soft p-3 text-sm not-has-[li]:hidden">
-            <h2 className="mb-2 font-semibold text-info-ink">How was dinner?</h2>
-            <ul className="space-y-2">
-              {rateQueue.map((m) => (
-                <RateRow
-                  key={m.id}
-                  id={m.id}
-                  when={shortDay(m.day)}
-                  name={(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
-                />
-              ))}
-            </ul>
-            {rateMore > 0 && <p className="mt-2 text-xs text-muted">{rateMore} more after these.</p>}
-          </Card>
-        )}
-
         <FillWeek week={monday} input={fillInput} emptyDays={emptyDays} labels={labels} />
+
+        <DayPills days={days} today={today} planned={plannedDays} />
 
         <div className="space-y-3">
           {days.map((day) => {
             const dayMeals = (meals ?? []).filter((m) => m.day === day);
             const isToday = day === today;
+            // Dinner is the main event; breakfast and lunch sit underneath, smaller.
+            const ordered = [
+              ...dayMeals.filter((m) => m.slot === "dinner"),
+              ...dayMeals.filter((m) => m.slot === "lunch"),
+              ...dayMeals.filter((m) => m.slot === "breakfast"),
+            ];
             return (
               <Card
                 as="section"
                 key={day}
-                id={isToday ? "today" : undefined}
+                id={`day-${day}`}
                 tone={isToday ? "accent" : "default"}
                 className="scroll-mt-24"
               >
@@ -294,117 +293,129 @@ export default async function PlanPage({
                   {dayLabel(day)}
                   {isToday && <Badge tone="success">Today</Badge>}
                 </h2>
-                <ul className="mt-2 space-y-2 text-sm">
-                  {SLOTS.flatMap((slot) =>
-                    dayMeals
-                      .filter((m) => m.slot === slot)
-                      .map((m) => {
-                        const off = m.kind !== "recipe";
-                        const r = m.recipes as unknown as {
-                          name: string;
-                          diet: string;
-                          prep_minutes: number | null;
-                          cook_minutes: number | null;
-                          tags: string[];
-                        } | null;
-                        const total = (r?.prep_minutes ?? 0) + (r?.cook_minutes ?? 0);
-                        const longCook =
-                          slot === "dinner" &&
-                          !!r &&
-                          ((r.cook_minutes ?? 0) >= 120 || r.tags?.includes("slow-cooker"));
-                        const hasKetoPlate = dayMeals.some(
-                          (o) =>
-                            o.id !== m.id &&
-                            o.slot === m.slot &&
-                            o.kind === "recipe" &&
-                            (o.recipes as unknown as { diet: string } | null)?.diet === "both"
-                        );
-                        const needsKeto = mode === "home" && r?.diet === "family" && !hasKetoPlate;
-                        const ideas = needsKeto ? ketoIdeas(m.recipe_id) : [];
-                        const mealName = r?.name ?? KIND_LABEL[m.kind] ?? "meal";
-                        return (
-                          <Removable key={m.id} id={m.id} label={mealName} action={removeMeal}>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="w-20 text-xs text-muted uppercase">{slot}</span>
-                              {off ? (
-                                <span className="text-muted italic">{KIND_LABEL[m.kind]}</span>
-                              ) : (
-                                <Link href={`/recipes/${m.recipe_id}`} className="hover:underline">
-                                  {r?.name ?? "(deleted recipe)"}
-                                </Link>
-                              )}
-                              {longCook && (
-                                <Badge tone="info" className="tabular-nums">
-                                  start by {clockBefore(dinnerTime, total)}
-                                </Badge>
-                              )}
+                <ul className="mt-3 space-y-3">
+                  {ordered.map((m) => {
+                    const big = m.slot === "dinner";
+                    const off = m.kind !== "recipe";
+                    const r = m.recipes as unknown as {
+                      name: string;
+                      diet: string;
+                      prep_minutes: number | null;
+                      cook_minutes: number | null;
+                      tags: string[];
+                    } | null;
+                    const total = (r?.prep_minutes ?? 0) + (r?.cook_minutes ?? 0);
+                    const longCook =
+                      big && !!r && ((r.cook_minutes ?? 0) >= 120 || r.tags?.includes("slow-cooker"));
+                    const hasKetoPlate = dayMeals.some(
+                      (o) =>
+                        o.id !== m.id &&
+                        o.slot === m.slot &&
+                        o.kind === "recipe" &&
+                        (o.recipes as unknown as { diet: string } | null)?.diet === "both"
+                    );
+                    const needsKeto = mode === "home" && r?.diet === "family" && !hasKetoPlate;
+                    const ideas = needsKeto ? ketoIdeas(m.recipe_id) : [];
+                    const mealName = r?.name ?? KIND_LABEL[m.kind] ?? "meal";
+                    const prot = m.recipe_id ? (proteinOf.get(m.recipe_id) ?? "none") : "none";
+                    return (
+                      <Removable key={m.id} id={m.id} label={mealName} action={removeMeal}>
+                        <div className="flex items-start gap-1">
+                          <div className="min-w-0 flex-1">
+                            {!big && <p className="text-xs font-medium text-muted uppercase">{SLOT_LABEL[m.slot]}</p>}
+                            {off ? (
+                              <p className={big ? "text-lg text-muted italic" : "text-muted italic"}>
+                                {KIND_LABEL[m.kind]}
+                              </p>
+                            ) : (
+                              <Link
+                                href={`/recipes/${m.recipe_id}`}
+                                className={
+                                  big
+                                    ? "text-lg leading-snug font-semibold hover:underline"
+                                    : "leading-snug hover:underline"
+                                }
+                              >
+                                {r?.name ?? "(deleted recipe)"}
+                              </Link>
+                            )}
+                            {!off && r && (
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className="text-sm text-muted tabular-nums">{formatMinutes(total)}</span>
+                                {big && prot !== "none" && <Badge>{cap(prot)}</Badge>}
+                                {big && <DietBadge diet={r.diet} />}
+                                {longCook && (
+                                  <Badge tone="info" className="tabular-nums">
+                                    start by {clockBefore(dinnerTime, total)}
+                                  </Badge>
+                                )}
+                                {m.protein_lbs != null && <Badge className="tabular-nums">{Number(m.protein_lbs)} lb</Badge>}
+                                {needsKeto && <Badge tone="warning">needs a keto option</Badge>}
+                              </div>
+                            )}
+                          </div>
+                          <Menu label={`Options for ${mealName}`} title={mealName}>
+                            <div className="space-y-5">
                               {!off && m.recipe_id && baseLbs.has(m.recipe_id) && (
-                                <form action={setMealProtein} className="flex items-center gap-1 text-xs">
+                                <form action={setMealProtein} className="space-y-2">
                                   <input type="hidden" name="id" value={m.id} />
-                                  <Input
-                                    name="lbs"
-                                    type="number"
-                                    step="0.25"
-                                    min="0.5"
-                                    max="10"
-                                    defaultValue={m.protein_lbs ?? ""}
-                                    placeholder={String(defaultLbs)}
-                                    aria-label="Pounds of meat"
-                                    className="w-20"
-                                  />
-                                  <span>lb</span>
-                                  <SubmitButton variant="ghost" size="sm">
-                                    set
+                                  <Field label="Pounds of meat" hint={`Leave blank for your usual ${defaultLbs} lb.`}>
+                                    <Input
+                                      name="lbs"
+                                      type="number"
+                                      step="0.25"
+                                      min="0.5"
+                                      max="10"
+                                      defaultValue={m.protein_lbs ?? ""}
+                                      placeholder={String(defaultLbs)}
+                                    />
+                                  </Field>
+                                  <SubmitButton className="w-full" data-menu-close>
+                                    Save pounds
                                   </SubmitButton>
                                 </form>
                               )}
-                              {needsKeto && <Badge tone="warning">needs a keto option</Badge>}
-                              <span className="ml-auto flex items-center gap-1">
-                                <details className="relative text-xs">
-                                  <summary className="flex min-h-11 cursor-pointer items-center rounded-sm px-2 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-                                    move
-                                  </summary>
-                                  <form
-                                    action={moveMeal}
-                                    className="absolute right-0 z-10 mt-1 flex items-center gap-2 rounded-md border border-border bg-surface p-2 shadow-lg"
-                                  >
-                                    <input type="hidden" name="id" value={m.id} />
-                                    <Select name="day" defaultValue={m.day} aria-label="Move to day" className="w-auto">
-                                      {days.map((d) => (
-                                        <option key={d} value={d}>
-                                          {shortDay(d)}
-                                        </option>
-                                      ))}
-                                    </Select>
-                                    <SubmitButton variant="primary">Go</SubmitButton>
-                                  </form>
-                                </details>
-                                <RemoveTrigger label={`Remove ${mealName}`} />
-                              </span>
+                              <form action={moveMeal} className="space-y-2">
+                                <input type="hidden" name="id" value={m.id} />
+                                <Field label="Move to">
+                                  <Select name="day" defaultValue={m.day}>
+                                    {days.map((d) => (
+                                      <option key={d} value={d}>
+                                        {shortDay(d)}
+                                      </option>
+                                    ))}
+                                  </Select>
+                                </Field>
+                                <SubmitButton className="w-full" data-menu-close>
+                                  Move
+                                </SubmitButton>
+                              </form>
+                              <RemoveMenuItem label={`Remove ${mealName}`} />
                             </div>
-                            {ideas.length > 0 && (
-                              <div className="mt-1 ml-0 flex flex-wrap items-center gap-2 text-xs sm:ml-20">
-                                <span className="text-muted">Keto plate with the same meat:</span>
-                                {ideas.map((k) => (
-                                  <form action={addMeal} key={k.id}>
-                                    <input type="hidden" name="week" value={monday} />
-                                    <input type="hidden" name="day" value={day} />
-                                    <input type="hidden" name="slot" value={m.slot} />
-                                    <input type="hidden" name="recipe_id" value={k.id} />
-                                    <SubmitButton size="sm">
-                                      <Plus aria-hidden className="size-4" /> {k.name}
-                                    </SubmitButton>
-                                  </form>
-                                ))}
-                              </div>
-                            )}
-                          </Removable>
-                        );
-                      })
-                  )}
+                          </Menu>
+                        </div>
+                        {ideas.length > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-muted">Keto plate with the same meat:</span>
+                            {ideas.map((k) => (
+                              <form action={addMeal} key={k.id}>
+                                <input type="hidden" name="week" value={monday} />
+                                <input type="hidden" name="day" value={day} />
+                                <input type="hidden" name="slot" value={m.slot} />
+                                <input type="hidden" name="recipe_id" value={k.id} />
+                                <SubmitButton size="sm">
+                                  <Plus aria-hidden className="size-4" /> {k.name}
+                                </SubmitButton>
+                              </form>
+                            ))}
+                          </div>
+                        )}
+                      </Removable>
+                    );
+                  })}
                   {dayMeals.length === 0 && <li className="text-muted">Nothing planned</li>}
                 </ul>
-                <AddMeal week={monday} day={day} mode={mode} recipes={pickerRecipes} />
+                <AddMeal week={monday} day={day} dayName={dayLabel(day)} mode={mode} recipes={pickerRecipes} />
               </Card>
             );
           })}

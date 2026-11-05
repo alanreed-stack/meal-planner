@@ -198,5 +198,6 @@ export async function savePlanSettings(formData: FormData) {
     await supabase.from("households").update(update).eq("id", householdId);
   }
   revalidatePath("/plan");
+  revalidatePath("/settings");
   revalidatePath("/recipes", "layout");
 }

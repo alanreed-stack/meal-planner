@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 
-/** Scrolls today's card into view once, when the page first loads. */
-export function ScrollToToday() {
+/** Scrolls the given day's card into view once, when the page first loads. */
+export function ScrollToToday({ targetId }: { targetId: string }) {
   useEffect(() => {
-    document.getElementById("today")?.scrollIntoView({ block: "center" });
-  }, []);
+    document.getElementById(targetId)?.scrollIntoView({ block: "center" });
+  }, [targetId]);
   return null;
 }

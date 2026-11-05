@@ -7,8 +7,8 @@ import { IconButton } from "@/components/ui/icon-button";
 import { useToast } from "@/components/ui/toast";
 import { rateMeal } from "./actions";
 
-/** One "How was dinner?" line. The row disappears the moment you answer. */
-export function RateRow({ id, when, name }: { id: string; when: string; name: string }) {
+/** The compact "How was dinner?" line. It disappears the moment you answer. */
+export function RateRow({ id, when, name, more }: { id: string; when: string; name: string; more: number }) {
   const [gone, setGone] = useOptimistic(false);
   const toast = useToast();
 
@@ -26,11 +26,12 @@ export function RateRow({ id, when, name }: { id: string; when: string; name: st
 
   if (gone) return null;
   return (
-    <li className="flex flex-wrap items-center gap-2">
-      <span className="min-w-0 flex-1">
-        <span className="text-muted">{when}: </span>
-        {name}
-      </span>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="font-semibold text-info-ink">How was {when}&apos;s dinner?</span>{" "}
+        <span>{name}</span>
+        {more > 0 && <span className="text-muted"> · {more} more after this</span>}
+      </p>
       <div className="flex items-center gap-1">
         <form action={answer(1)}>
           <IconButton type="submit" label="Liked it" variant="secondary">
