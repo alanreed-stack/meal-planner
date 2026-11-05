@@ -10,7 +10,32 @@ export type RecipeDraft = {
   ingredients: string; // one per line
   steps: string; // one per line
   tags: string; // comma separated
+  image: string | null; // https address of the page's main photo, if there is one
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function imageOf(node: any, html: string, pageUrl: string): string | null {
+  const first = (v: unknown): string | null => {
+    if (!v) return null;
+    if (typeof v === "string") return v;
+    if (Array.isArray(v)) return first(v[0]);
+    if (typeof v === "object") return first((v as { url?: unknown }).url);
+    return null;
+  };
+  let src = first(node?.image);
+  if (!src) {
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    src = og?.[1] ?? null;
+  }
+  if (!src) return null;
+  try {
+    const u = new URL(src.replace(/&amp;/g, "&"), pageUrl);
+    return u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
 function isPrivate(ip: string): boolean {
   if (ip.includes(":")) {
@@ -142,6 +167,7 @@ export async function importRecipeFromUrl(url: string): Promise<RecipeDraft> {
         ingredients: ingredients.join("\n"),
         steps: steps(r.recipeInstructions).join("\n"),
         tags: kw.split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean).slice(0, 6).join(", "),
+        image: imageOf(r, html, url.trim()),
       };
     } catch {
       // try the next block

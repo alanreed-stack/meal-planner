@@ -7,7 +7,16 @@ import { clockBefore } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { proteinLbs } from "@/lib/scale";
 import type { Cand, FillInput } from "@/lib/autofill";
-import { addMeal, copyLastWeek, moveMeal, removeMeal, savePlanSettings, setMealProtein, setMode } from "./actions";
+import {
+  addMeal,
+  copyLastWeek,
+  moveMeal,
+  rateMeal,
+  removeMeal,
+  savePlanSettings,
+  setMealProtein,
+  setMode,
+} from "./actions";
 import { AddMeal, type PickerRecipe } from "./add-meal";
 import { FillWeek } from "./fill-week";
 import { ScrollToToday } from "./scroll-today";
@@ -49,7 +58,7 @@ export default async function PlanPage({
         .maybeSingle(),
       supabase
         .from("recipes")
-        .select("id, name, diet, favorite, prep_minutes, cook_minutes")
+        .select("id, name, diet, favorite, prep_minutes, cook_minutes, rating")
         .eq("archived", false)
         .order("name"),
       supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category"),
@@ -125,7 +134,22 @@ export default async function PlanPage({
     minutes: minutesOf(r),
     protein: proteinOf.get(r.id) ?? "none",
     lastDay: lastDay.get(r.id) ?? null,
+    rating: r.rating ?? 0,
   }));
+
+  // Dinners from the past week that nobody has rated yet.
+  const { data: toRate } = await supabase
+    .from("planned_meals")
+    .select("id, day, recipes(name)")
+    .eq("kind", "recipe")
+    .eq("slot", "dinner")
+    .is("rating", null)
+    .not("recipe_id", "is", null)
+    .gte("day", addDays(today, -7))
+    .lt("day", today)
+    .order("day", { ascending: false });
+  const rateQueue = (toRate ?? []).slice(0, 3);
+  const rateMore = (toRate ?? []).length - rateQueue.length;
 
   const dinners = (meals ?? []).filter((m) => m.slot === "dinner");
   const existing: FillInput["existing"] = {};
@@ -223,6 +247,35 @@ export default async function PlanPage({
           </label>
           <button className="rounded border bg-white px-2 py-1">Save</button>
         </form>
+
+        {rateQueue.length > 0 && (
+          <section className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
+            <h2 className="mb-2 font-semibold">How was dinner?</h2>
+            <ul className="space-y-2">
+              {rateQueue.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="text-neutral-500">{shortDay(m.day)}: </span>
+                    {(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
+                  </span>
+                  <form action={rateMeal} className="flex items-center gap-1">
+                    <input type="hidden" name="id" value={m.id} />
+                    <button name="rating" value="1" aria-label="Liked it" className="rounded border bg-white px-2.5 py-1">
+                      👍
+                    </button>
+                    <button name="rating" value="-1" aria-label="Not a fan" className="rounded border bg-white px-2.5 py-1">
+                      👎
+                    </button>
+                    <button name="rating" value="0" className="px-2 py-1 text-xs text-neutral-500 underline">
+                      skip
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+            {rateMore > 0 && <p className="mt-2 text-xs text-neutral-500">{rateMore} more after these.</p>}
+          </section>
+        )}
 
         <FillWeek week={monday} input={fillInput} emptyDays={emptyDays} labels={labels} />
 

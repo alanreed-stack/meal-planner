@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
 import { formatMinutes } from "@/lib/format";
-import type { Metadata } from "next";
+import { mainProtein } from "@/lib/protein";
+import { todayET } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Recipes" };
 
@@ -44,32 +46,101 @@ async function deleteForever(formData: FormData) {
 const FILTERS = [
   { key: "all", label: "All" },
   { key: "favorites", label: "Favorites" },
-  { key: "keto", label: "Keto-friendly" },
+  { key: "both", label: "Keto + family" },
+  { key: "keto", label: "Keto only" },
   { key: "family", label: "Family-only" },
   { key: "quick", label: "Quick" },
   { key: "archived", label: "Removed" },
+];
+const PROTEINS = ["chicken", "beef", "pork", "turkey", "shrimp", "fish"];
+const SORTS = [
+  { key: "name", label: "Name" },
+  { key: "time", label: "Cook time" },
+  { key: "recent", label: "Least recently made" },
 ];
 
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string; q?: string }>;
+  searchParams: Promise<{ f?: string; q?: string; p?: string; s?: string }>;
 }) {
-  const { f = "all", q = "" } = await searchParams;
+  const { f = "all", q = "", p = "", s = "name" } = await searchParams;
   const { supabase, householdId, inviteCode } = await requireHousehold();
-  const missing = await missingStarterCount(supabase, householdId);
+  const today = todayET();
 
-  let query = supabase
-    .from("recipes")
-    .select("id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite")
-    .eq("archived", f === "archived")
-    .order("name");
-  if (f === "favorites") query = query.eq("favorite", true);
-  if (f === "keto") query = query.eq("diet", "both");
-  if (f === "family") query = query.eq("diet", "family");
-  if (f === "quick") query = query.contains("tags", ["quick"]);
-  if (q) query = query.ilike("name", `%${q}%`);
-  const { data: recipes } = await query;
+  const [missing, { data: all }, { data: ings }, { data: made }] = await Promise.all([
+    missingStarterCount(supabase, householdId),
+    supabase
+      .from("recipes")
+      .select(
+        "id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite, archived, rating, image_url"
+      ),
+    supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category"),
+    supabase.from("planned_meals").select("recipe_id, day").not("recipe_id", "is", null).lte("day", today),
+  ]);
+
+  const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string }[]>();
+  for (const i of ings ?? []) {
+    const list = ingsBy.get(i.recipe_id) ?? [];
+    list.push({ name: i.name, qty: i.qty == null ? null : Number(i.qty), unit: i.unit, category: i.category });
+    ingsBy.set(i.recipe_id, list);
+  }
+  const lastMade = new Map<string, string>();
+  for (const m of made ?? []) {
+    if (m.recipe_id && (!lastMade.has(m.recipe_id) || m.day > lastMade.get(m.recipe_id)!)) {
+      lastMade.set(m.recipe_id, m.day);
+    }
+  }
+
+  const total = (r: { prep_minutes: number | null; cook_minutes: number | null }) =>
+    (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0);
+  const protein = (id: string) => mainProtein(ingsBy.get(id) ?? []);
+  const term = q.trim().toLowerCase();
+
+  const recipes = (all ?? [])
+    .filter((r) => r.archived === (f === "archived"))
+    .filter((r) => {
+      if (f === "favorites") return r.favorite;
+      if (f === "both") return r.diet === "both";
+      if (f === "keto") return r.diet === "keto";
+      if (f === "family") return r.diet === "family";
+      if (f === "quick") return r.tags?.includes("quick") || total(r) <= 30;
+      return true;
+    })
+    .filter((r) => !p || protein(r.id) === p)
+    .filter((r) => !term || r.name.toLowerCase().includes(term))
+    .sort((a, b) => {
+      if (s === "time") return total(a) - total(b) || a.name.localeCompare(b.name);
+      if (s === "recent") {
+        // Never made first, then the longest ago.
+        const la = lastMade.get(a.id) ?? "";
+        const lb = lastMade.get(b.id) ?? "";
+        return la.localeCompare(lb) || a.name.localeCompare(b.name);
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+  const href = (over: Record<string, string>) => {
+    const params = new URLSearchParams();
+    const merged = { f, p, s, q, ...over };
+    for (const [k, v] of Object.entries(merged)) {
+      if (v && !(k === "f" && v === "all") && !(k === "s" && v === "name")) params.set(k, v);
+    }
+    const qs = params.toString();
+    return qs ? `/recipes?${qs}` : "/recipes";
+  };
+  const chip = (on: boolean) =>
+    `rounded-full border px-3 py-1 text-sm ${on ? "bg-green-700 text-white" : "bg-white"}`;
+
+  const madeLabel = (id: string) => {
+    const l = lastMade.get(id);
+    if (!l) return "Never made";
+    const days = Math.round((Date.parse(today + "T00:00:00Z") - Date.parse(l + "T00:00:00Z")) / 86_400_000);
+    if (days <= 0) return "Made today";
+    if (days < 7) return `Made ${days} day${days === 1 ? "" : "s"} ago`;
+    const wk = Math.round(days / 7);
+    return `Made ${wk} week${wk === 1 ? "" : "s"} ago`;
+  };
 
   return (
     <>
@@ -82,6 +153,8 @@ export default async function RecipesPage({
           </Link>
           <form className="flex gap-2">
             <input type="hidden" name="f" value={f} />
+            <input type="hidden" name="p" value={p} />
+            <input type="hidden" name="s" value={s} />
             <input
               name="q"
               defaultValue={q}
@@ -103,64 +176,92 @@ export default async function RecipesPage({
             <button className="rounded-lg bg-green-700 px-3 py-1.5 text-white">Add them</button>
           </form>
         )}
-        <div className="mb-5 flex flex-wrap gap-2">
+
+        <div className="mb-2 flex flex-wrap gap-2">
           {FILTERS.map((x) => (
-            <Link
-              key={x.key}
-              href={`/recipes?f=${x.key}`}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                f === x.key ? "bg-green-700 text-white" : "bg-white"
-              }`}
-            >
+            <Link key={x.key} href={href({ f: x.key })} className={chip(f === x.key)}>
               {x.label}
             </Link>
           ))}
         </div>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500">Meat:</span>
+          {PROTEINS.map((x) => (
+            <Link key={x} href={href({ p: p === x ? "" : x })} className={chip(p === x)}>
+              {x}
+            </Link>
+          ))}
+        </div>
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500">Sort by:</span>
+          {SORTS.map((x) => (
+            <Link key={x.key} href={href({ s: x.key })} className={chip(s === x.key)}>
+              {x.label}
+            </Link>
+          ))}
+          <span className="ml-auto text-xs text-neutral-500">
+            {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
         <ul className="grid gap-3 sm:grid-cols-2">
-          {(recipes ?? []).map((r) => (
-            <li key={r.id} className="rounded-xl border bg-white p-4">
-              <div className="flex items-start justify-between gap-2">
-                <Link href={`/recipes/${r.id}`} className="font-semibold hover:underline">
-                  {r.name}
-                </Link>
-                <form action={toggleFavorite}>
-                  <input type="hidden" name="id" value={r.id} />
-                  <input type="hidden" name="favorite" value={String(r.favorite)} />
-                  <button aria-label="Toggle favorite" className="text-xl leading-none">
-                    {r.favorite ? "★" : "☆"}
-                  </button>
-                </form>
-              </div>
-              <p className="mt-1 text-sm text-neutral-600">{r.description}</p>
-              {f === "archived" && (
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                  <form action={setArchived}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <input type="hidden" name="archive" value="false" />
-                    <button className="rounded border px-2 py-1">Restore</button>
-                  </form>
-                  <details>
-                    <summary className="cursor-pointer text-red-700">Delete forever</summary>
-                    <form action={deleteForever} className="mt-2 flex items-center gap-2">
-                      <input type="hidden" name="id" value={r.id} />
-                      <span className="text-xs">This can&apos;t be undone.</span>
-                      <button className="rounded bg-red-700 px-2 py-1 text-white">Yes, delete</button>
-                    </form>
-                  </details>
-                </div>
+          {recipes.map((r) => (
+            <li key={r.id} className="overflow-hidden rounded-xl border bg-white">
+              {r.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={r.image_url}
+                  alt=""
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="h-36 w-full object-cover"
+                />
               )}
-              <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-                <span className="rounded bg-green-100 px-2 py-0.5">
-                  {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto" : "Family only"}
-                </span>
-                <span className="rounded bg-neutral-100 px-2 py-0.5">
-                  {formatMinutes((r.prep_minutes ?? 0) + (r.cook_minutes ?? 0))}
-                </span>
-                <span className="rounded bg-neutral-100 px-2 py-0.5">{r.difficulty}</span>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <Link href={`/recipes/${r.id}`} className="font-semibold hover:underline">
+                    {r.rating === 1 && <span title="Liked">👍 </span>}
+                    {r.rating === -1 && <span title="Not a fan">👎 </span>}
+                    {r.name}
+                  </Link>
+                  <form action={toggleFavorite}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="favorite" value={String(r.favorite)} />
+                    <button aria-label="Toggle favorite" className="text-xl leading-none">
+                      {r.favorite ? "★" : "☆"}
+                    </button>
+                  </form>
+                </div>
+                <p className="mt-1 text-sm text-neutral-600">{r.description}</p>
+                {f === "archived" && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                    <form action={setArchived}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <input type="hidden" name="archive" value="false" />
+                      <button className="rounded border px-2 py-1">Restore</button>
+                    </form>
+                    <details>
+                      <summary className="cursor-pointer text-red-700">Delete forever</summary>
+                      <form action={deleteForever} className="mt-2 flex items-center gap-2">
+                        <input type="hidden" name="id" value={r.id} />
+                        <span className="text-xs">This can&apos;t be undone.</span>
+                        <button className="rounded bg-red-700 px-2 py-1 text-white">Yes, delete</button>
+                      </form>
+                    </details>
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                  <span className="rounded bg-green-100 px-2 py-0.5">
+                    {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto only" : "Family only"}
+                  </span>
+                  <span className="rounded bg-neutral-100 px-2 py-0.5">{formatMinutes(total(r))}</span>
+                  <span className="rounded bg-neutral-100 px-2 py-0.5">{r.difficulty}</span>
+                  <span className="rounded bg-neutral-100 px-2 py-0.5">{madeLabel(r.id)}</span>
+                </div>
               </div>
             </li>
           ))}
-          {recipes?.length === 0 && (
+          {recipes.length === 0 && (
             <li className="text-neutral-500">
               {f === "archived" ? "Nothing has been removed." : "No recipes match."}
             </li>

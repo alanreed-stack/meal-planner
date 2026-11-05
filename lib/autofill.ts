@@ -8,6 +8,7 @@ export type Cand = {
   minutes: number;
   protein: string;
   lastDay: string | null; // most recent time it was planned before this week
+  rating?: number; // 1 liked, -1 not a fan, 0/undefined no rating yet
 };
 
 export type FillInput = {
@@ -74,6 +75,8 @@ function chooseFor(
       .filter((c) => !usedIds.has(c.id) && eligible(c, input, gap))
       .map((c) => {
         let w = c.favorite ? 3 : 1;
+        if ((c.rating ?? 0) > 0) w *= 1.5;
+        if ((c.rating ?? 0) < 0) w *= 0.15; // thumbs-down: still possible, but rarely suggested
         if (c.protein !== "none") {
           if (!allowAdjacent && (c.protein === prev || c.protein === next)) w = 0;
           const n = perProtein[c.protein] ?? 0;

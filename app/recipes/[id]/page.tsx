@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { niceQty, proteinLbs, scaleFactor } from "@/lib/scale";
@@ -18,6 +19,18 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data } = await supabase.from("recipes").select("name").eq("id", id).maybeSingle();
   return { title: data?.name ?? "Recipe" };
+}
+
+/** 1 = liked, -1 = not a fan, 0 = clear. Thumbs-down recipes are suggested less. */
+async function rateRecipe(formData: FormData) {
+  "use server";
+  const { supabase } = await requireHousehold();
+  const n = Number(formData.get("rating"));
+  const rating = n === 1 || n === -1 ? n : null;
+  const id = String(formData.get("id"));
+  await supabase.from("recipes").update({ rating }).eq("id", id);
+  revalidatePath(`/recipes/${id}`);
+  revalidatePath("/recipes");
 }
 
 async function archiveRecipe(formData: FormData) {
@@ -73,8 +86,48 @@ export default async function RecipePage({
         <Link href="/recipes" className="text-sm text-green-800 underline">
           ← All recipes
         </Link>
+        {r.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={r.image_url}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="mt-3 h-52 w-full rounded-xl object-cover"
+          />
+        )}
         <h1 className="mt-2 text-2xl font-bold">{r.name}</h1>
         <p className="text-neutral-600">{r.description}</p>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <Link
+            href={`/recipes/${r.id}/cook?lbs=${target}`}
+            className="rounded-lg bg-green-700 px-4 py-2 font-medium text-white"
+          >
+            Start cooking
+          </Link>
+          <Link href={`/recipes/${r.id}/edit`} className="rounded-lg border px-3 py-2">
+            Edit
+          </Link>
+          <form action={rateRecipe} className="ml-auto flex items-center gap-1">
+            <input type="hidden" name="id" value={r.id} />
+            <button
+              name="rating"
+              value={r.rating === 1 ? "0" : "1"}
+              aria-label="Liked it"
+              className={`rounded-lg border px-2.5 py-1.5 ${r.rating === 1 ? "bg-green-100" : "bg-white"}`}
+            >
+              👍
+            </button>
+            <button
+              name="rating"
+              value={r.rating === -1 ? "0" : "-1"}
+              aria-label="Not a fan"
+              className={`rounded-lg border px-2.5 py-1.5 ${r.rating === -1 ? "bg-red-100" : "bg-white"}`}
+            >
+              👎
+            </button>
+          </form>
+        </div>
 
         {!r.archived && (
           <details className="mt-3 rounded-lg border bg-white p-3 text-sm">

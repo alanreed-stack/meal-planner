@@ -166,6 +166,24 @@ export async function setMealProtein(formData: FormData) {
   revalidatePath("/plan");
 }
 
+/** After-dinner rating: 1 = liked, -1 = not a fan, 0 = skip. Also updates the recipe's overall rating. */
+export async function rateMeal(formData: FormData) {
+  const { supabase } = await requireHousehold();
+  const n = Number(formData.get("rating"));
+  if (n !== 1 && n !== -1 && n !== 0) return;
+  const { data: meal } = await supabase
+    .from("planned_meals")
+    .update({ rating: n })
+    .eq("id", String(formData.get("id")))
+    .select("recipe_id")
+    .maybeSingle();
+  if (meal?.recipe_id && n !== 0) {
+    await supabase.from("recipes").update({ rating: n }).eq("id", meal.recipe_id);
+  }
+  revalidatePath("/plan");
+  revalidatePath("/recipes");
+}
+
 /** Saves the usual meat weight and dinner time together. */
 export async function savePlanSettings(formData: FormData) {
   const { supabase, householdId } = await requireHousehold();

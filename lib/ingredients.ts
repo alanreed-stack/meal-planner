@@ -19,6 +19,9 @@ const UNITS: Record<string, string> = {
   jar: "jar", jars: "jar", bag: "bag", bags: "bag", box: "box", boxes: "box",
   pack: "pack", packs: "pack", packet: "packet", packets: "packet", package: "package", packages: "package", pkg: "package",
   stick: "stick", sticks: "stick",
+  piece: "piece", pieces: "piece",
+  bottle: "bottle", bottles: "bottle", tub: "tub", tubs: "tub",
+  loaf: "loaf", loaves: "loaf", pint: "pint", pints: "pint",
 };
 
 function parseNumber(token: string): number | null {
@@ -105,3 +108,18 @@ export function parseIngredient(rawLine: string): ParsedIngredient | null {
 
   return { name, qty, unit, category: guessCategory(name), family_only };
 }
+
+/** The reverse of parseIngredient: a stored ingredient back into an editable line. */
+export function ingredientToLine(i: {
+  name: string;
+  qty: number | null;
+  unit: string | null;
+  family_only: boolean;
+}): string {
+  const qty = i.qty == null ? "" : String(Math.round(Number(i.qty) * 100) / 100);
+  return [i.family_only ? "+" : "", qty, i.unit ?? "", i.name].filter(Boolean).join(" ");
+}
+
+/** Lowercase name without "(canned)"-style notes, so an edited line can find the stored ingredient. */
+export const ingredientKey = (name: string) =>
+  name.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
