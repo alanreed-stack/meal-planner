@@ -17,7 +17,7 @@ export default async function MatchPage({
 }) {
   const { id } = await params;
   const { q } = await searchParams;
-  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
 
   const { data: item } = await supabase
     .from("shopping_items")
@@ -44,14 +44,14 @@ export default async function MatchPage({
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <Nav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <Link href="/shopping" className="text-sm text-green-800 underline">
           ← Back to list
         </Link>
         <h1 className="mt-2 text-xl font-bold">Pick a Kroger product for: {item.name}</h1>
         <form className="my-4 flex gap-2 text-sm">
-          <input name="q" defaultValue={term} className="min-w-0 flex-1 rounded border px-2 py-1" />
+          <input name="q" defaultValue={term} className="w-full min-w-0 flex-1 rounded border px-2 py-1" />
           <button className="rounded bg-green-700 px-3 py-1 text-white">Search</button>
         </form>
         {failed && <p className="text-sm text-red-700">Kroger search failed. Try again.</p>}

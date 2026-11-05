@@ -42,7 +42,7 @@ export default async function SetupPage({
   const input = "rounded-lg border px-3 py-2";
   const btn = "rounded-lg bg-green-700 px-3 py-2 font-medium text-white";
   return (
-    <main className="mx-auto max-w-md space-y-8 px-4 py-10">
+    <main className="mx-auto w-full max-w-md space-y-8 px-4 py-10">
       <h1 className="text-2xl font-bold">Set up your household</h1>
       {error && <p className="text-sm text-red-700">{error}</p>}
 

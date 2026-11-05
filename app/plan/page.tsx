@@ -46,7 +46,7 @@ export default async function PlanPage({
   const { w } = await searchParams;
   const today = todayET();
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : today);
-  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
 
   const [{ data: week }, { data: recipes }, { data: allIngs }, { data: history }, { data: hh }] =
     await Promise.all([
@@ -183,9 +183,9 @@ export default async function PlanPage({
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
+      <Nav />
       {weekHasToday && !w && <ScrollToToday />}
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <Link href={`/plan?w=${addDays(monday, -7)}`} className="rounded border px-2 py-1">
             ←
@@ -247,6 +247,20 @@ export default async function PlanPage({
           </label>
           <button className="rounded border bg-white px-2 py-1">Save</button>
         </form>
+
+        {(meals ?? []).length === 0 && (
+          <section className="mb-4 rounded-xl border border-dashed bg-white p-4 text-center">
+            <p className="text-lg font-semibold">A fresh week</p>
+            <p className="mt-1 text-sm text-neutral-600">
+              Nothing is planned yet. Let us suggest dinners with the button below, copy last week, or add
+              meals day by day.
+            </p>
+            <form action={copyLastWeek} className="mt-3">
+              <input type="hidden" name="week" value={monday} />
+              <button className="rounded-lg border px-4 py-2 text-sm">Copy last week</button>
+            </form>
+          </section>
+        )}
 
         {rateQueue.length > 0 && (
           <section className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
@@ -365,7 +379,7 @@ export default async function PlanPage({
                               )}
                               <span className="ml-auto flex items-center gap-3">
                                 <details className="relative text-xs">
-                                  <summary className="cursor-pointer text-neutral-500 hover:text-neutral-800">
+                                  <summary className="cursor-pointer px-1 py-2 text-neutral-500 hover:text-neutral-800">
                                     move
                                   </summary>
                                   <form
@@ -385,7 +399,7 @@ export default async function PlanPage({
                                 </details>
                                 <form action={removeMeal}>
                                   <input type="hidden" name="id" value={m.id} />
-                                  <button aria-label="Remove" className="text-neutral-400 hover:text-red-700">
+                                  <button aria-label="Remove" className="px-2 py-1.5 text-neutral-400 hover:text-red-700">
                                     ✕
                                   </button>
                                 </form>

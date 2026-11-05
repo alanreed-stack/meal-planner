@@ -23,7 +23,7 @@ export default async function ShoppingPage({
 }) {
   const { w, kroger, n, zip = "30307" } = await searchParams;
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
-  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
 
   const [{ data: hh }, { data: conn }] = await Promise.all([
     supabase
@@ -125,8 +125,8 @@ export default async function ShoppingPage({
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <Nav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <Link href={`/shopping?w=${addDays(monday, -7)}`} className="rounded border px-2 py-1">
             ←
@@ -307,7 +307,7 @@ export default async function ShoppingPage({
                         <input type="hidden" name="to_order" value={String(i.to_order)} />
                         <button
                           aria-label={i.to_order ? "Don't order" : "Order"}
-                          className={`h-6 w-6 rounded border text-xs ${
+                          className={`h-8 w-8 rounded border text-sm ${
                             i.to_order ? "bg-green-700 text-white" : "bg-white"
                           }`}
                         >
@@ -320,7 +320,7 @@ export default async function ShoppingPage({
                       {i.manual && <span className="rounded bg-neutral-100 px-1.5 text-xs">added</span>}
                       <form action={deleteItem} className="ml-auto">
                         <input type="hidden" name="id" value={i.id} />
-                        <button aria-label="Delete" className="text-neutral-400 hover:text-red-700">
+                        <button aria-label="Delete" className="px-2 py-1.5 text-neutral-400 hover:text-red-700">
                           ✕
                         </button>
                       </form>
@@ -413,14 +413,24 @@ export default async function ShoppingPage({
         ))}
 
         {list.length === 0 && (
-          <p className="mb-5 text-neutral-500">
-            Nothing here yet. Plan some meals on the This week page, then build the list.
-          </p>
+          <div className="mb-5 rounded-xl border border-dashed bg-white p-6 text-center">
+            <p className="text-lg font-semibold">No list yet</p>
+            <p className="mt-1 text-sm text-neutral-600">
+              {(mealCount ?? 0) > 0
+                ? "You have meals planned. Tap “Build list from this week's meals” above."
+                : "Plan some dinners first, then the list builds itself from them."}
+            </p>
+            {(mealCount ?? 0) === 0 && (
+              <Link href={`/plan?w=${monday}`} className="mt-3 inline-block rounded-lg bg-green-700 px-4 py-2 text-sm text-white">
+                Plan this week
+              </Link>
+            )}
+          </div>
         )}
 
         <form action={addItem} className="flex flex-wrap gap-2 rounded-xl border bg-white p-4 text-sm">
           <input type="hidden" name="week" value={monday} />
-          <input name="name" required placeholder="Add an item (milk, paper towels…)" className="min-w-0 flex-1 rounded border px-2 py-1" />
+          <input name="name" required placeholder="Add an item (milk, paper towels…)" className="w-full min-w-0 flex-1 rounded border px-2 py-1" />
           <input name="qty" type="number" step="any" min="0" placeholder="Qty" className="w-16 rounded border px-2 py-1" />
           <input name="unit" placeholder="Unit" className="w-20 rounded border px-2 py-1" />
           <select name="category" defaultValue="other" className="rounded border px-2 py-1">

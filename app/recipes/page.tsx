@@ -65,7 +65,7 @@ export default async function RecipesPage({
   searchParams: Promise<{ f?: string; q?: string; p?: string; s?: string }>;
 }) {
   const { f = "all", q = "", p = "", s = "name" } = await searchParams;
-  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
   const today = todayET();
 
   const [missing, { data: all }, { data: ings }, { data: made }] = await Promise.all([
@@ -144,8 +144,8 @@ export default async function RecipesPage({
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <Nav />
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <h1 className="mr-auto text-2xl font-bold">Recipes</h1>
           <Link href="/recipes/new" className="rounded-lg bg-green-700 px-3 py-1.5 text-sm text-white">
@@ -263,7 +263,16 @@ export default async function RecipesPage({
           ))}
           {recipes.length === 0 && (
             <li className="text-neutral-500">
-              {f === "archived" ? "Nothing has been removed." : "No recipes match."}
+              {f === "archived" ? (
+                "Nothing has been removed."
+              ) : (
+                <>
+                  No recipes match.{" "}
+                  <Link href="/recipes" className="text-green-800 underline">
+                    Clear filters
+                  </Link>
+                </>
+              )}
             </li>
           )}
         </ul>

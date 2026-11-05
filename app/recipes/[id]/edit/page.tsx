@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Edit recipe" };
 
 export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, inviteCode } = await requireHousehold();
+  const { supabase } = await requireHousehold();
 
   const { data: r } = await supabase.from("recipes").select("*").eq("id", id).maybeSingle();
   if (!r) notFound();
@@ -22,8 +22,8 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <Nav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <Link href={`/recipes/${id}`} className="text-sm text-green-800 underline">
           ← Back to recipe
         </Link>

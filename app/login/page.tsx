@@ -36,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
+    <main className="mx-auto w-full flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
       <div>
         <h1 className="text-3xl font-bold">Family Meal Planner</h1>
         <p className="mt-1 text-sm text-neutral-600">

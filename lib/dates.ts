@@ -39,3 +39,10 @@ export function weekLabel(monday: string): string {
 export function isPast(iso: string): boolean {
   return new Date(iso).getTime() < Date.now();
 }
+
+/** Hour of the day (0-23) in Eastern time, for "good morning / evening". */
+export function hourET(): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" }).format(new Date())
+  ) % 24;
+}

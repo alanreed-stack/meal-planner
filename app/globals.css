@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Leave room for the bottom tab bar on phones, only on pages that have one. */
+@media (max-width: 767px) {
+  body:has([data-tabbar]) {
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+}

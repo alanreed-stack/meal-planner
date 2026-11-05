@@ -60,7 +60,7 @@ export function CookMode({
   const next = done.findIndex((d) => !d);
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl bg-white px-4 pb-24">
+    <div className="mx-auto w-full min-h-screen max-w-2xl bg-white px-4 pb-24">
       <header className="sticky top-0 z-10 -mx-4 border-b bg-white/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <Link href={backHref} className="rounded border px-3 py-1.5 text-sm">

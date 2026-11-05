@@ -52,7 +52,7 @@ export default async function RecipePage({
 }) {
   const { id } = await params;
   const { lbs } = await searchParams;
-  const { supabase, householdId, inviteCode } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
   const { data: hh } = await supabase
     .from("households")
     .select("default_protein_lbs")
@@ -81,8 +81,8 @@ export default async function RecipePage({
 
   return (
     <>
-      <Nav inviteCode={inviteCode} />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <Nav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <Link href="/recipes" className="text-sm text-green-800 underline">
           ← All recipes
         </Link>

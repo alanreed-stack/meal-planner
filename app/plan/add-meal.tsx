@@ -89,7 +89,7 @@ export function AddMeal({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search recipes…"
-          className="min-w-0 flex-1 rounded border px-2 py-1"
+          className="w-full min-w-0 flex-1 rounded border px-2 py-1"
         />
         <select name="slot" defaultValue="dinner" className="rounded border px-2 py-1" aria-label="Meal">
           {SLOTS.map((s) => (
@@ -142,19 +142,21 @@ export function AddMeal({
             <button
               name="recipe_id"
               value={r.id}
-              className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-green-50"
+              className="block min-h-11 w-full px-2 py-2 text-left hover:bg-green-50"
             >
-              <span className="min-w-0 flex-1">
+              <span className="block">
                 {r.f && <span className="mr-1 text-amber-500">★</span>}
                 {r.n}
               </span>
-              <span className="shrink-0 text-xs text-neutral-500">
-                {formatMinutes(r.m)}
-                {ago(r.w) ? ` · ${ago(r.w)}` : ""}
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500">
+                <span>
+                  {formatMinutes(r.m)}
+                  {ago(r.w) ? ` · ${ago(r.w)}` : ""}
+                </span>
+                {mode === "home" && r.d === "family" && (
+                  <span className="rounded bg-amber-100 px-1.5 text-neutral-800">family only</span>
+                )}
               </span>
-              {mode === "home" && r.d === "family" && (
-                <span className="shrink-0 rounded bg-amber-100 px-1.5 text-xs">family only</span>
-              )}
             </button>
           </li>
         ))}
