@@ -42,7 +42,8 @@ function parseNumber(token: string): number | null {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
-export function guessCategory(name: string): string {
+/** The shopping aisle a name points to, or null when nothing in it gives a clue (e.g. "paper towels"). */
+export function guessAisle(name: string): string | null {
   const n = name.toLowerCase();
   const has = (words: string[]) => words.some((w) => n.includes(w));
   if (n.includes("frozen")) return "frozen";
@@ -57,7 +58,11 @@ export function guessCategory(name: string): string {
   if (has(["milk", "cheese", "butter", "cream", "yogurt", "egg", "parmesan", "mozzarella", "cheddar", "ricotta"]))
     return "dairy";
   if (has(["bread", "bun", "tortilla", "bagel", "roll", "pita", "naan"])) return "bakery";
-  return "pantry";
+  return null;
+}
+
+export function guessCategory(name: string): string {
+  return guessAisle(name) ?? "pantry";
 }
 
 export type ParsedIngredient = {

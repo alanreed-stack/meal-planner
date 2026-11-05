@@ -168,3 +168,13 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Pages with a send-to-Kroger bar above the tab bar: leave room for it, and lift toasts above it. */
+@media (max-width: 767px) {
+  body:has([data-actionbar]) {
+    padding-bottom: calc(3.5rem + 4.5rem + env(safe-area-inset-bottom));
+  }
+  body:has([data-actionbar]) [data-toasts] {
+    bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+}

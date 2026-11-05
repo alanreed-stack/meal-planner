@@ -150,6 +150,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Sits above the bottom tab bar on phones. */}
       <div
+        data-toasts
         aria-live="polite"
         className="pointer-events-none fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
       >

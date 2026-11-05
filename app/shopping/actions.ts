@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { niceQty, scaleFactor } from "@/lib/scale";
 import { packagesNeeded } from "@/lib/packaging";
+import { guessAisle } from "@/lib/ingredients";
 import { splitOptions } from "@/lib/match";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
@@ -174,6 +175,9 @@ export async function addItem(formData: FormData) {
     week = data;
   }
   const qty = Number(formData.get("qty"));
+  // "auto" (or nothing chosen) means: guess the aisle from the name, and fall back to "other".
+  const picked = String(formData.get("category") ?? "auto");
+  const category = picked && picked !== "auto" ? picked : (guessAisle(name) ?? "other");
   const { data: m } = await supabase
     .from("kroger_matches")
     .select("upc, product_id, description, size, price, confidence, qty_override")
@@ -202,7 +206,7 @@ export async function addItem(formData: FormData) {
     name,
     qty: Number.isFinite(qty) && qty > 0 ? qty : null,
     unit: String(formData.get("unit") ?? "").trim() || null,
-    category: String(formData.get("category") ?? "other"),
+    category,
     manual: true,
   });
   revalidatePath("/shopping");

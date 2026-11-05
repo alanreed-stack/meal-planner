@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
@@ -14,10 +15,12 @@ import { ChevronLeft, ChevronRight, ExternalLink, ShoppingCart } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { Card, EmptyState, SectionHeader, cardStyles } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import { IconLink } from "@/components/ui/icon-link";
+import { Menu } from "@/components/ui/menu";
 import { Notice } from "@/components/ui/notice";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { Removable, RemoveTrigger } from "@/components/removable";
+import { Removable, RemoveMenuItem } from "@/components/removable";
 import { KrogerFlash, OrderToggle } from "./controls";
 
 export const metadata: Metadata = { title: "Shopping" };
@@ -131,136 +134,94 @@ export default async function ShoppingPage({
     rows: list.filter((i) => (CATEGORIES.includes(i.category) ? i.category : "other") === c),
   })).filter((g) => g.rows.length);
 
+  // What can be sent to the Kroger cart right now: matched, checked, and not already sent.
+  const sendable = list.filter((i) => i.to_order && i.kroger_upc && !i.sent_at);
+  const sendTotal = sendable.reduce(
+    (sum, i) => sum + (i.kroger_price != null ? Number(i.kroger_price) * i.order_qty : 0),
+    0
+  );
+  const matchedCount = list.filter((i) => i.to_order && i.kroger_upc).length;
+  const sendLabel = `Send ${sendable.length} item${sendable.length === 1 ? "" : "s"} to Kroger${
+    sendTotal > 0 ? ` · about $${sendTotal.toFixed(2)}` : ""
+  }`;
+
   return (
     <>
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <ButtonLink href={`/shopping?w=${addDays(monday, -7)}`} variant="secondary" aria-label="Previous week" className="px-3">
+          <IconLink href={`/shopping?w=${addDays(monday, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />
-          </ButtonLink>
-          <h1 className="text-xl font-bold tabular-nums">Shopping: {weekLabel(monday)}</h1>
-          <ButtonLink href={`/shopping?w=${addDays(monday, 7)}`} variant="secondary" aria-label="Next week" className="px-3">
+          </IconLink>
+          <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          <IconLink href={`/shopping?w=${addDays(monday, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
-          </ButtonLink>
+          </IconLink>
         </div>
 
-        <Card className="mb-5 flex flex-wrap items-center gap-3 text-sm">
-          <form action={generateList}>
-            <input type="hidden" name="week" value={monday} />
-            <SubmitButton variant="primary">
-              {list.length ? "Rebuild from this week's meals" : "Build list from this week's meals"}
-            </SubmitButton>
-          </form>
-          <span className="text-muted tabular-nums">
-            {mealCount ?? 0} planned meal{mealCount === 1 ? "" : "s"} · {toOrder} of {list.length} items to
-            order
-            {priced.length > 0 && ` · about $${total.toFixed(2)}`}
-          </span>
-          {list.length > 0 && (
-            <ButtonLink href={`/shopping/store?w=${monday}`} className="ml-auto">
-              In-store checklist
-            </ButtonLink>
-          )}
-        </Card>
-        {list.length > 0 && (
-          <p className="mb-4 text-xs text-muted">
-            Checked items will be ordered. Uncheck anything you already have. Rebuilding keeps your
-            checkboxes and the items you added yourself.
-          </p>
+        <KrogerFlash status={kroger} n={n} week={monday} />
+        {connExpired && kroger !== "expired" && (
+          <Notice
+            tone="warning"
+            className="mb-4"
+            action={
+              <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="secondary" size="sm">
+                Reconnect Kroger
+              </ButtonAnchor>
+            }
+          >
+            Your Kroger connection expired. Reconnect before you send your list.
+          </Notice>
         )}
 
-        <Card as="section" className="mb-5 space-y-3 text-sm">
-          <h2 className="font-semibold">Kroger</h2>
-          <KrogerFlash status={kroger} n={n} week={monday} />
-          {connExpired && kroger !== "expired" && (
-            <Notice
-              tone="warning"
-              action={
-                <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="secondary" size="sm">
-                  Reconnect Kroger
-                </ButtonAnchor>
-              }
-            >
-              Your Kroger connection expired. Reconnect before you send your list.
-            </Notice>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex items-center gap-2">
-              Account: <Badge tone={conn ? "success" : "neutral"}>{conn ? "connected" : "not connected"}</Badge>
-            </span>
-            <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer">
-              Open Kroger cart <ExternalLink aria-hidden className="size-4" />
-            </ButtonAnchor>
-            <ButtonAnchor href={`/api/kroger/connect?w=${monday}`}>
-              {conn ? "Reconnect" : "Connect Kroger"}
-            </ButtonAnchor>
-          </div>
-
-          <div>
-            {hasStore ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span>Store: {hh?.kroger_store_name}</span>
-                <form action={clearStore}>
-                  <SubmitButton variant="ghost" size="sm">
-                    change
-                  </SubmitButton>
-                </form>
-              </div>
-            ) : (
-              <div>
-                <form className="mb-2 flex items-center gap-2">
-                  <input type="hidden" name="w" value={monday} />
-                  <label htmlFor="zip">Stores near</label>
-                  <Input id="zip" name="zip" defaultValue={zip} className="w-28" />
-                  <Button type="submit">Search</Button>
-                </form>
-                {storeError && <Notice tone="error">Store lookup failed. Try again.</Notice>}
-                <ul className="divide-y divide-border rounded-md border border-border">
-                  {stores.map((s) => (
-                    <li key={s.id} className="flex items-center gap-2 px-2 py-2">
-                      <span className="flex-1">
-                        {s.name}
-                        <span className="block text-xs text-muted">{s.address}</span>
-                      </span>
-                      <form action={setStore}>
-                        <input type="hidden" name="id" value={s.id} />
-                        <input type="hidden" name="name" value={`${s.name} (${s.address})`} />
-                        <SubmitButton variant="primary">Use this store</SubmitButton>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        {/* 1. The week at a glance, and the one button that builds the list. */}
+        <Card as="section" className="mb-5 space-y-4">
+          <dl className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <dd className="text-2xl font-bold tabular-nums">{mealCount ?? 0}</dd>
+              <dt className="text-xs text-muted">Meals planned</dt>
+            </div>
+            <div>
+              <dd className="text-2xl font-bold tabular-nums">
+                {toOrder}
+                <span className="text-base font-normal text-muted"> / {list.length}</span>
+              </dd>
+              <dt className="text-xs text-muted">Items to order</dt>
+            </div>
+            <div>
+              <dd className="text-2xl font-bold tabular-nums">{priced.length > 0 ? `$${total.toFixed(2)}` : "—"}</dd>
+              <dt className="text-xs text-muted">Estimated total</dt>
+            </div>
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <form action={generateList}>
+              <input type="hidden" name="week" value={monday} />
+              <SubmitButton variant={list.length ? "secondary" : "primary"}>
+                {list.length ? "Rebuild list" : "Build list from this week's meals"}
+              </SubmitButton>
+            </form>
+            {list.length > 0 && (
+              <ButtonLink href={`/shopping/store?w=${monday}`}>In-store checklist</ButtonLink>
             )}
           </div>
-
-          {hasStore && list.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              <form action={matchItems}>
-                <input type="hidden" name="week" value={monday} />
-                <SubmitButton>Match items to Kroger products</SubmitButton>
-              </form>
-              <form action={sendToCart}>
-                <input type="hidden" name="week" value={monday} />
-                <SubmitButton variant="primary">Send checked items to Kroger cart</SubmitButton>
-              </form>
-              {priced.length > 0 && (
-                <p className="w-full text-xs text-muted tabular-nums">
-                  Estimated total <b>${total.toFixed(2)}</b> for {priced.length} priced item
-                  {priced.length === 1 ? "" : "s"}
-                  {unpriced > 0 ? `, plus ${unpriced} with no match yet` : ""}. Kroger&apos;s price per package
-                  times how many you&apos;re buying. Tax, fees and substitutions aren&apos;t included.
-                </p>
-              )}
-            </div>
+          {list.length > 0 && (
+            <p className="text-xs text-muted">
+              Checked items get ordered. Uncheck what you already have. Rebuilding keeps your checkboxes and anything you
+              added.
+              {priced.length > 0 &&
+                ` The total is Kroger's price per package times how many you're buying${
+                  unpriced > 0 ? `, and leaves out ${unpriced} item${unpriced === 1 ? "" : "s"} with no match yet` : ""
+                }. Tax, fees and substitutions aren't included.`}
+            </p>
           )}
         </Card>
 
+        {/* 2. The list. */}
         {groups.map((g) => (
           <section key={g.category} className="mb-5 not-has-[li]:hidden">
-            <SectionHeader className="mb-1">{g.category}</SectionHeader>
+            <SectionHeader className="sticky top-0 z-10 -mx-4 bg-background/95 px-4 py-2 backdrop-blur">
+              {g.category} · {g.rows.length}
+            </SectionHeader>
             <Card as="ul" padded={false} className="divide-y divide-border">
               {g.rows.map((i) => {
                 const qty = i.qty == null ? null : Number(i.qty);
@@ -271,6 +232,9 @@ export default async function ShoppingPage({
                 const uses = usedBy(i.name);
                 const isStaple = staples.has(i.name.trim().toLowerCase());
                 const needText = qty != null ? `Need ${formatAmount(qty, i.unit)}` : "";
+                const buyNote = i.order_qty_manual
+                  ? `${needText ? needText + " · " : ""}you set ${i.order_qty}`
+                  : pack?.note || `Buying ${i.order_qty}`;
                 return (
                   <Removable
                     key={i.id}
@@ -279,85 +243,95 @@ export default async function ShoppingPage({
                     action={deleteItem}
                     className="px-3 py-1 text-sm"
                   >
+                    {/* Line 1: tick box, the item, a tag if you added it, and the ⋯ menu. */}
                     <div className="flex items-center gap-1">
                       <OrderToggle id={i.id} checked={i.to_order} text={formatIngredient(qty, i.unit, i.name)} />
-                      {i.manual && <Badge className="ml-1">added</Badge>}
-                      <span className="ml-auto">
-                        <RemoveTrigger label={`Delete ${i.name}`} />
+                      <span className="ml-auto flex items-center gap-1">
+                        {i.manual && <Badge>added</Badge>}
+                        <Menu label={`More for ${i.name}`} title={i.name}>
+                          <div className="space-y-5 text-sm">
+                            <div>
+                              <p className="font-medium">What&apos;s this for?</p>
+                              <p className="text-muted">
+                                {uses.length
+                                  ? uses.join(", ")
+                                  : i.manual
+                                    ? "You added this yourself."
+                                    : "No planned meal uses this now."}
+                              </p>
+                              {similar && <p className="mt-1 text-muted">Similar to {similar} on this list.</p>}
+                            </div>
+
+                            {hasStore && (
+                              <ButtonLink href={`/shopping/match/${i.id}`} className="w-full">
+                                {i.kroger_upc ? "Change Kroger product" : "Find a Kroger product"}
+                              </ButtonLink>
+                            )}
+
+                            {hasStore && i.kroger_upc && (
+                              <form action={setQty} className="space-y-2">
+                                <input type="hidden" name="id" value={i.id} />
+                                <Field label="Packages to buy" hint={`${buyNote}. Leave empty for automatic.`}>
+                                  <Input
+                                    name="qty"
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    defaultValue={i.order_qty_manual ? i.order_qty : ""}
+                                    placeholder={String(i.order_qty)}
+                                  />
+                                </Field>
+                                <SubmitButton className="w-full" data-menu-close>
+                                  Save
+                                </SubmitButton>
+                              </form>
+                            )}
+
+                            {isStaple ? (
+                              <p className="text-muted">On your &ldquo;things we always have&rdquo; list.</p>
+                            ) : (
+                              <form action={addStaple}>
+                                <input type="hidden" name="name" value={i.name} />
+                                <input type="hidden" name="item_id" value={i.id} />
+                                <SubmitButton className="w-full" data-menu-close>
+                                  We always have this
+                                </SubmitButton>
+                              </form>
+                            )}
+
+                            <RemoveMenuItem label={`Delete ${i.name}`} />
+                          </div>
+                        </Menu>
                       </span>
                     </div>
-                    {similar && <p className="ml-12 text-xs text-muted">similar to {similar}</p>}
-                    <details className="ml-12 text-xs text-muted">
-                      <summary className="min-h-8 cursor-pointer py-1 hover:text-foreground">
-                        {uses.length
-                          ? `for ${uses.length} meal${uses.length === 1 ? "" : "s"}`
-                          : i.manual
-                            ? "added by hand"
-                            : "what's this for?"}
-                        {isStaple && " · we always have this"}
-                      </summary>
-                      <div className="mt-1 space-y-1 pb-2">
-                        {uses.length > 0 ? (
-                          <p>{uses.join(", ")}</p>
-                        ) : (
-                          <p>{i.manual ? "You added this yourself." : "No planned meal uses this now."}</p>
-                        )}
-                        {!isStaple && (
-                          <form action={addStaple}>
-                            <input type="hidden" name="name" value={i.name} />
-                            <input type="hidden" name="item_id" value={i.id} />
-                            <SubmitButton size="sm">We always have this</SubmitButton>
-                          </form>
-                        )}
-                      </div>
-                    </details>
+
+                    {/* Line 2, only when it matters: what Kroger product it matched, and anything to double-check. */}
                     {hasStore && i.to_order && (
-                      <div className="ml-12 space-y-1 pb-2 text-xs text-muted">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {i.kroger_upc ? (
-                            <span title={i.kroger_description ?? ""} className="tabular-nums">
-                              → {i.kroger_description}
-                              {i.kroger_price
-                                ? ` ($${Number(i.kroger_price).toFixed(2)}${i.order_qty > 1 ? ` × ${i.order_qty}` : ""})`
-                                : ""}
-                            </span>
-                          ) : (
-                            <span className="text-warning-ink">no Kroger match yet</span>
-                          )}
-                          {i.match_confidence === "low" && (
-                            <Badge tone="warning">low confidence, check this</Badge>
-                          )}
-                          <ButtonLink href={`/shopping/match/${i.id}`} variant="ghost" size="sm">
-                            {i.kroger_upc ? "change" : "find"}
-                          </ButtonLink>
-                        </div>
-                        {i.kroger_upc && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="tabular-nums">
-                              {i.order_qty_manual
-                                ? `${needText ? needText + " · " : ""}you set ${i.order_qty}`
-                                : pack?.note || `Buying ${i.order_qty}`}
-                            </span>
-                            {!i.order_qty_manual && pack?.flag && <Badge tone="warning">check quantity</Badge>}
-                            <form action={setQty} className="flex items-center gap-1">
-                              <input type="hidden" name="id" value={i.id} />
-                              <Input
-                                name="qty"
-                                type="number"
-                                min={1}
-                                max={50}
-                                defaultValue={i.order_qty_manual ? i.order_qty : ""}
-                                placeholder={String(i.order_qty)}
-                                className="w-20"
-                                aria-label="Packages to buy (empty for automatic)"
-                              />
-                              <SubmitButton variant="ghost" size="sm">
-                                set
-                              </SubmitButton>
-                            </form>
-                            {i.sent_at && <Badge tone="success">in cart</Badge>}
-                          </div>
+                      <div className="ml-12 flex flex-wrap items-center gap-x-2 gap-y-1 pb-2 text-muted">
+                        {i.kroger_upc ? (
+                          <span title={i.kroger_description ?? ""} className="min-w-0 tabular-nums">
+                            {i.kroger_description}
+                            {i.kroger_price != null && (
+                              <>
+                                {" "}
+                                · ${Number(i.kroger_price).toFixed(2)}
+                                {i.order_qty > 1 ? ` × ${i.order_qty}` : ""}
+                              </>
+                            )}
+                          </span>
+                        ) : (
+                          <span>
+                            No Kroger match yet ·{" "}
+                            <Link href={`/shopping/match/${i.id}`} className="text-primary-ink underline">
+                              Find
+                            </Link>
+                          </span>
                         )}
+                        {i.match_confidence === "low" && <Badge tone="warning">low confidence</Badge>}
+                        {i.kroger_upc && !i.order_qty_manual && pack?.flag && (
+                          <Badge tone="warning">check quantity</Badge>
+                        )}
+                        {i.sent_at && <Badge tone="success">in cart</Badge>}
                       </div>
                     )}
                   </Removable>
@@ -386,25 +360,152 @@ export default async function ShoppingPage({
           </EmptyState>
         )}
 
-        <form action={addItem} className={cardStyles("default", true, "flex flex-wrap gap-2 text-sm")}>
+        {/* Add something by hand: just a name and Add. Amount, unit and aisle are optional. */}
+        <form action={addItem} className={cardStyles("default", true, "mb-5 space-y-3 text-sm")}>
           <input type="hidden" name="week" value={monday} />
-          <Input
-            name="name"
-            required
-            placeholder="Add an item (milk, paper towels…)"
-            aria-label="Item name"
-            className="min-w-0 flex-1"
-          />
-          <Input name="qty" type="number" step="any" min="0" placeholder="Qty" aria-label="Quantity" className="w-20" />
-          <Input name="unit" placeholder="Unit" aria-label="Unit" className="w-24" />
-          <Select name="category" defaultValue="other" aria-label="Aisle" className="w-auto">
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </Select>
-          <SubmitButton variant="primary">Add</SubmitButton>
+          <div className="flex gap-2">
+            <Input
+              name="name"
+              required
+              placeholder="Add an item (milk, paper towels…)"
+              aria-label="Item name"
+              className="min-w-0 flex-1"
+            />
+            <SubmitButton variant="primary">Add</SubmitButton>
+          </div>
+          <details>
+            <summary className="flex min-h-11 cursor-pointer items-center text-muted hover:text-foreground">
+              More: amount, unit, aisle
+            </summary>
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Field label="Amount">
+                <Input name="qty" type="number" step="any" min="0" placeholder="e.g. 2" />
+              </Field>
+              <Field label="Unit">
+                <Input name="unit" placeholder="e.g. lb" />
+              </Field>
+              <Field label="Aisle" className="col-span-2 sm:col-span-1">
+                <Select name="category" defaultValue="auto">
+                  <option value="auto">Auto (from the name)</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          </details>
         </form>
+
+        {/* 3. Kroger: a short status card. The list above is what you came for. */}
+        <Card as="section" className="space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">Kroger</h2>
+            <Badge tone={conn ? "success" : "neutral"}>{conn ? "connected" : "not connected"}</Badge>
+            <span className="flex-1" />
+            <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="ghost" size="sm">
+              {conn ? "Reconnect" : "Connect"}
+            </ButtonAnchor>
+          </div>
+
+          {hasStore ? (
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1">
+                <span className="text-muted">Store: </span>
+                {hh?.kroger_store_name}
+              </span>
+              <form action={clearStore}>
+                <SubmitButton variant="ghost" size="sm">
+                  Change store
+                </SubmitButton>
+              </form>
+            </div>
+          ) : (
+            <div>
+              <p className="mb-2 text-muted">Pick your store so we can find real products and prices.</p>
+              <form className="mb-2 flex items-center gap-2">
+                <input type="hidden" name="w" value={monday} />
+                <label htmlFor="zip">Stores near</label>
+                <Input id="zip" name="zip" defaultValue={zip} className="w-28" />
+                <Button type="submit">Search</Button>
+              </form>
+              {storeError && <Notice tone="error">Store lookup failed. Try again.</Notice>}
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {stores.map((s) => (
+                  <li key={s.id} className="flex items-center gap-2 px-2 py-2">
+                    <span className="flex-1">
+                      {s.name}
+                      <span className="block text-xs text-muted">{s.address}</span>
+                    </span>
+                    <form action={setStore}>
+                      <input type="hidden" name="id" value={s.id} />
+                      <input type="hidden" name="name" value={`${s.name} (${s.address})`} />
+                      <SubmitButton variant="primary">Use this store</SubmitButton>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {hasStore && (
+            <div className="flex flex-wrap gap-2">
+              {list.length > 0 && (
+                <form action={matchItems}>
+                  <input type="hidden" name="week" value={monday} />
+                  <SubmitButton>Match items</SubmitButton>
+                </form>
+              )}
+              <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer">
+                Open Kroger cart <ExternalLink aria-hidden className="size-4" />
+              </ButtonAnchor>
+              {/* On a computer the send button lives here; on a phone it's the bar at the bottom. */}
+              {sendable.length > 0 && conn && (
+                <form action={sendToCart} className="hidden md:block">
+                  <input type="hidden" name="week" value={monday} />
+                  <SubmitButton variant="primary">{sendLabel}</SubmitButton>
+                </form>
+              )}
+            </div>
+          )}
+        </Card>
       </main>
+
+      {/* Phones: one thumb-reach button above the tab bar. Hidden until a store is chosen. */}
+      {hasStore && list.length > 0 && (
+        <div
+          data-actionbar
+          className="fixed inset-x-0 bottom-[calc(3.6rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 p-2 backdrop-blur md:hidden"
+        >
+          {!conn ? (
+            <ButtonAnchor
+              href={`/api/kroger/connect?w=${monday}`}
+              variant="primary"
+              size="lg"
+              className="w-full"
+            >
+              Connect Kroger to send your list
+            </ButtonAnchor>
+          ) : matchedCount === 0 ? (
+            <form action={matchItems}>
+              <input type="hidden" name="week" value={monday} />
+              <SubmitButton variant="primary" size="lg" className="w-full">
+                Match items first
+              </SubmitButton>
+            </form>
+          ) : sendable.length > 0 ? (
+            <form action={sendToCart}>
+              <input type="hidden" name="week" value={monday} />
+              <SubmitButton variant="primary" size="lg" className="w-full">
+                {sendLabel}
+              </SubmitButton>
+            </form>
+          ) : (
+            <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer" size="lg" className="w-full">
+              All sent. Open Kroger cart <ExternalLink aria-hidden className="size-4" />
+            </ButtonAnchor>
+          )}
+        </div>
+      )}
     </>
   );
 }
