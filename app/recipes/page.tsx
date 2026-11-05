@@ -15,6 +15,8 @@ import { ChipLink } from "@/components/ui/chip";
 import { Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FavoriteButton } from "./controls";
+import { FiltersSheet, type FilterState } from "./filters";
+import { RecipeTile } from "./recipe-tile";
 
 export const metadata: Metadata = { title: "Recipes" };
 
@@ -42,28 +44,29 @@ async function deleteForever(formData: FormData) {
   revalidatePath("/recipes");
 }
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "favorites", label: "Favorites" },
-  { key: "both", label: "Keto + family" },
-  { key: "keto", label: "Keto only" },
-  { key: "family", label: "Family-only" },
-  { key: "quick", label: "Quick" },
-  { key: "archived", label: "Removed" },
-];
-const PROTEINS = ["chicken", "beef", "pork", "turkey", "shrimp", "fish"];
-const SORTS = [
-  { key: "name", label: "Name" },
-  { key: "time", label: "Cook time" },
-  { key: "recent", label: "Least recently made" },
-];
+type Params = {
+  q?: string;
+  fav?: string;
+  quick?: string;
+  diet?: string;
+  p?: string;
+  s?: string;
+  removed?: string;
+  f?: string; // older links: ?f=favorites etc.
+};
 
-export default async function RecipesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ f?: string; q?: string; p?: string; s?: string }>;
-}) {
-  const { f = "all", q = "", p = "", s = "name" } = await searchParams;
+export default async function RecipesPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const raw = await searchParams;
+  // Older bookmarks used a single ?f=... value; translate them.
+  const legacy = raw.f ?? "";
+  const q = raw.q ?? "";
+  const fav = raw.fav === "1" || legacy === "favorites";
+  const quick = raw.quick === "1" || legacy === "quick";
+  const diet = raw.diet || (["both", "keto", "family"].includes(legacy) ? legacy : "");
+  const p = raw.p ?? "";
+  const s = raw.s || "name";
+  const removed = raw.removed === "1" || legacy === "archived";
+
   const { supabase, householdId } = await requireHousehold();
   const today = todayET();
 
@@ -97,15 +100,10 @@ export default async function RecipesPage({
   const term = q.trim().toLowerCase();
 
   const recipes = (all ?? [])
-    .filter((r) => r.archived === (f === "archived"))
-    .filter((r) => {
-      if (f === "favorites") return r.favorite;
-      if (f === "both") return r.diet === "both";
-      if (f === "keto") return r.diet === "keto";
-      if (f === "family") return r.diet === "family";
-      if (f === "quick") return r.tags?.includes("quick") || total(r) <= 30;
-      return true;
-    })
+    .filter((r) => r.archived === removed)
+    .filter((r) => !fav || r.favorite)
+    .filter((r) => !quick || r.tags?.includes("quick") || total(r) <= 30)
+    .filter((r) => !diet || r.diet === diet)
     .filter((r) => !p || protein(r.id) === p)
     .filter((r) => !term || r.name.toLowerCase().includes(term))
     .sort((a, b) => {
@@ -119,15 +117,22 @@ export default async function RecipesPage({
       return a.name.localeCompare(b.name);
     });
 
-  const href = (over: Record<string, string>) => {
+  // A link that flips one choice and keeps the rest.
+  const state = { q, fav: fav ? "1" : "", quick: quick ? "1" : "", diet, p, s, removed: removed ? "1" : "" };
+  const href = (over: Partial<typeof state>) => {
     const params = new URLSearchParams();
-    const merged = { f, p, s, q, ...over };
-    for (const [k, v] of Object.entries(merged)) {
-      if (v && !(k === "f" && v === "all") && !(k === "s" && v === "name")) params.set(k, v);
+    for (const [k, v] of Object.entries({ ...state, ...over })) {
+      if (v && !(k === "s" && v === "name")) params.set(k, v);
     }
     const qs = params.toString();
     return qs ? `/recipes?${qs}` : "/recipes";
   };
+
+  // The count on the Filters chip: only choices that live inside the sheet (not the chips you can already see).
+  const sheetCount = [p, diet === "keto" || diet === "family" ? diet : "", s !== "name" ? s : "", removed ? "1" : ""].filter(Boolean).length;
+  const anyFilter = fav || quick || !!diet || !!p || removed || s !== "name";
+  const filterState: FilterState = { q, fav, quick, diet, p, s, removed };
+
   const madeLabel = (id: string) => {
     const l = lastMade.get(id);
     if (!l) return "Never made";
@@ -142,20 +147,25 @@ export default async function RecipesPage({
     <>
       <Nav />
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <h1 className="mr-auto text-2xl font-bold">Recipes</h1>
+        <div className="mb-3 flex items-center gap-3">
+          <h1 className="flex-1 text-2xl font-bold">Recipes</h1>
           <ButtonLink href="/recipes/new" variant="primary">
             <Plus aria-hidden className="size-4" /> Add recipe
           </ButtonLink>
-          <form className="flex gap-2">
-            <input type="hidden" name="f" value={f} />
-            <input type="hidden" name="p" value={p} />
-            <input type="hidden" name="s" value={s} />
-            <Input name="q" defaultValue={q} placeholder="Search" aria-label="Search recipes" className="w-48" />
-          </form>
         </div>
+
+        <form className="mb-3">
+          {fav && <input type="hidden" name="fav" value="1" />}
+          {quick && <input type="hidden" name="quick" value="1" />}
+          {diet && <input type="hidden" name="diet" value={diet} />}
+          {p && <input type="hidden" name="p" value={p} />}
+          {s !== "name" && <input type="hidden" name="s" value={s} />}
+          {removed && <input type="hidden" name="removed" value="1" />}
+          <Input type="search" name="q" defaultValue={q} placeholder="Search recipes" aria-label="Search recipes" />
+        </form>
+
         {/* threshold keeps the banner away if you delete a couple of starters for good */}
-        {missing >= 10 && f === "all" && (
+        {missing >= 10 && !anyFilter && !term && (
           <form
             action={addStarterRecipes}
             className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3 text-sm"
@@ -168,62 +178,66 @@ export default async function RecipesPage({
           </form>
         )}
 
-        <div className="mb-2 flex flex-wrap gap-2">
-          {FILTERS.map((x) => (
-            <ChipLink key={x.key} href={href({ f: x.key })} on={f === x.key}>
-              {x.label}
-            </ChipLink>
-          ))}
+        {/* One row that scrolls sideways. Everything else is behind the Filters chip. */}
+        <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+          <FiltersSheet state={filterState} count={sheetCount} />
+          <ChipLink
+            className="shrink-0"
+            href={href({ fav: "", quick: "", diet: "", p: "", s: "name", removed: "" })}
+            on={!anyFilter}
+          >
+            All
+          </ChipLink>
+          <ChipLink className="shrink-0" href={href({ fav: fav ? "" : "1" })} on={fav}>
+            Favorites
+          </ChipLink>
+          <ChipLink className="shrink-0" href={href({ diet: diet === "both" ? "" : "both" })} on={diet === "both"}>
+            Keto + family
+          </ChipLink>
+          <ChipLink className="shrink-0" href={href({ quick: quick ? "" : "1" })} on={quick}>
+            Quick
+          </ChipLink>
         </div>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted">Meat:</span>
-          {PROTEINS.map((x) => (
-            <ChipLink key={x} href={href({ p: p === x ? "" : x })} on={p === x}>
-              {x}
-            </ChipLink>
-          ))}
-        </div>
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted">Sort by:</span>
-          {SORTS.map((x) => (
-            <ChipLink key={x.key} href={href({ s: x.key })} on={s === x.key}>
-              {x.label}
-            </ChipLink>
-          ))}
-          <span className="ml-auto text-xs text-muted tabular-nums">
-            {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
-          </span>
-        </div>
+        <p className="mb-4 text-xs text-muted tabular-nums">
+          {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
+          {removed ? " (removed)" : ""}
+        </p>
 
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {recipes.map((r) => (
             <li key={r.id}>
-              <Card padded={false} className="overflow-hidden">
-                {r.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.image_url}
-                    alt=""
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    className="h-36 w-full object-cover"
+              <Card padded={false} className="relative flex h-full flex-col overflow-hidden">
+                <div className="relative">
+                  {r.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.image_url}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-36 w-full object-cover"
+                    />
+                  ) : (
+                    <RecipeTile protein={protein(r.id)} />
+                  )}
+                  <FavoriteButton
+                    id={r.id}
+                    favorite={r.favorite}
+                    className="absolute top-2 right-2 z-10 rounded-md bg-surface/85 backdrop-blur"
                   />
-                )}
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/recipes/${r.id}`}
-                      className="flex items-center gap-1.5 font-semibold hover:underline"
-                    >
-                      {r.rating === 1 && <ThumbsUp aria-label="Liked" className="size-4 shrink-0 text-primary-ink" />}
-                      {r.rating === -1 && <ThumbsDown aria-label="Not a fan" className="size-4 shrink-0 text-danger-ink" />}
-                      {r.name}
-                    </Link>
-                    <FavoriteButton id={r.id} favorite={r.favorite} className="-mr-2 -mt-2" />
-                  </div>
-                  <p className="mt-1 text-sm text-muted">{r.description}</p>
-                  {f === "archived" && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                </div>
+                <div className="flex flex-1 flex-col p-4">
+                  <Link
+                    href={`/recipes/${r.id}`}
+                    className="flex items-center gap-1.5 font-semibold after:absolute after:inset-0 hover:underline"
+                  >
+                    {r.rating === 1 && <ThumbsUp aria-label="Liked" className="size-4 shrink-0 text-primary-ink" />}
+                    {r.rating === -1 && <ThumbsDown aria-label="Not a fan" className="size-4 shrink-0 text-danger-ink" />}
+                    {r.name}
+                  </Link>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted">{r.description}</p>
+                  {removed && (
+                    <div className="relative z-10 mt-3 flex flex-wrap items-center gap-3 text-sm">
                       <form action={setArchived}>
                         <input type="hidden" name="id" value={r.id} />
                         <input type="hidden" name="archive" value="false" />
@@ -239,7 +253,7 @@ export default async function RecipesPage({
                       </details>
                     </div>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
                     <DietBadge diet={r.diet} />
                     <Badge className="tabular-nums">{formatMinutes(total(r))}</Badge>
                     <Badge>{r.difficulty}</Badge>
@@ -250,8 +264,8 @@ export default async function RecipesPage({
             </li>
           ))}
           {recipes.length === 0 && (
-            <li className="text-muted sm:col-span-2">
-              {f === "archived" ? (
+            <li className="text-muted sm:col-span-2 lg:col-span-3">
+              {removed ? (
                 "Nothing has been removed."
               ) : (
                 <>

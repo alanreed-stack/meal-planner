@@ -35,22 +35,41 @@ const httpsOrNull = (v: FormDataEntryValue | null) => {
   }
 };
 
+export type SaveState = {
+  /** Problems with a specific field, shown under that field. */
+  errors?: { name?: string; ingredients?: string };
+  /** A problem that isn't about one field (the save itself failed). */
+  error?: string;
+  /** Everything that was typed, handed back so a failed save doesn't wipe the form. */
+  values?: Record<string, string>;
+  /** Changes on every attempt, so the form knows to refill itself. */
+  n?: number;
+};
+
+const fieldsOf = (formData: FormData) => {
+  const values: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) if (typeof v === "string") values[k] = v;
+  return values;
+};
+
 /** Creates a recipe, or updates one when the form carries a recipe_id. */
-export async function saveRecipe(
-  _prev: { error?: string } | undefined,
-  formData: FormData
-): Promise<{ error?: string }> {
+export async function saveRecipe(_prev: SaveState | undefined, formData: FormData): Promise<SaveState> {
   const { supabase, householdId, user } = await requireHousehold();
   const editingId = String(formData.get("recipe_id") ?? "") || null;
+  const values = fieldsOf(formData);
+  const fail = (e: Omit<SaveState, "values" | "n">): SaveState => ({ ...e, values, n: Date.now() });
 
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Give the recipe a name." };
-
   const lines = String(formData.get("ingredients") ?? "")
     .split("\n")
     .map(parseIngredient)
     .filter((i): i is NonNullable<typeof i> => !!i);
-  if (!lines.length) return { error: "Add at least one ingredient." };
+
+  // Check everything at once, so you can fix it all in one go.
+  const errors: { name?: string; ingredients?: string } = {};
+  if (!name) errors.name = "Give the recipe a name.";
+  if (!lines.length) errors.ingredients = "Add at least one ingredient, one per line (like “2 lb ground beef”).";
+  if (errors.name || errors.ingredients) return fail({ errors });
 
   // When editing, keep the stored name (e.g. "diced tomatoes (canned)") and aisle for lines that
   // still match, so Kroger matches and the shopping list keep working.
@@ -103,7 +122,7 @@ export async function saveRecipe(
       .eq("id", editingId)
       .select("id")
       .single();
-    if (error || !data) return { error: "Couldn't save your changes. Try again." };
+    if (error || !data) return fail({ error: "Couldn't save your changes. Try again." });
     recipeId = data.id;
   } else {
     const { data, error } = await supabase
@@ -111,7 +130,7 @@ export async function saveRecipe(
       .insert({ ...fields, household_id: householdId, source: "custom", created_by: user.id })
       .select("id")
       .single();
-    if (error || !data) return { error: "Couldn't save the recipe. Try again." };
+    if (error || !data) return fail({ error: "Couldn't save the recipe. Try again." });
     recipeId = data.id;
   }
 
@@ -130,7 +149,7 @@ export async function saveRecipe(
   );
   if (e2) {
     if (!editingId) await supabase.from("recipes").delete().eq("id", recipeId);
-    return { error: "Couldn't save the ingredients. Try again." };
+    return fail({ error: "Couldn't save the ingredients. Try again." });
   }
   if (old.length) {
     await supabase.from("recipe_ingredients").delete().in("id", old.map((o) => o.id));

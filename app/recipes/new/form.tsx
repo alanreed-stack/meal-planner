@@ -3,10 +3,9 @@
 import { useActionState } from "react";
 import { importRecipe, saveRecipe } from "./actions";
 import { Button } from "@/components/ui/button";
-import { cardStyles } from "@/components/ui/card";
+import { Card, cardStyles } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
-
 
 export type RecipeFormInitial = {
   id: string;
@@ -28,6 +27,13 @@ export function NewRecipeForm({ edit }: { edit?: RecipeFormInitial }) {
   const [imp, importAction, importing] = useActionState(importRecipe, {});
   const [save, saveAction, saving] = useActionState(saveRecipe, undefined);
   const d = imp.draft;
+
+  // What to show in a box: what you just typed (if a save failed), else what was imported, else what was already saved.
+  const typed = save?.values;
+  const val = (key: string, imported: string | number | null | undefined, saved: string | number | null | undefined) =>
+    typed?.[key] ?? (imported != null && imported !== "" ? String(imported) : undefined) ?? (saved != null ? String(saved) : undefined);
+
+  const errors = save?.errors;
 
   return (
     <div className="space-y-8">
@@ -53,90 +59,132 @@ export function NewRecipeForm({ edit }: { edit?: RecipeFormInitial }) {
         </form>
       )}
 
-      {/* key remounts the form with new defaults after each import */}
-      <form key={imp.n ?? "manual"} action={saveAction} className="space-y-4">
-        <h2 className="font-semibold">{edit ? "Edit recipe" : "Recipe details"}</h2>
+      {/* The key remounts the form with fresh values after an import or a failed save, so nothing you typed is lost. */}
+      <form key={`${imp.n ?? "manual"}-${save?.n ?? 0}`} action={saveAction} className="space-y-5" noValidate>
         {edit && <input type="hidden" name="recipe_id" value={edit.id} />}
-        <Field label="Recipe name">
-          <Input name="name" required defaultValue={d?.name ?? edit?.name} />
-        </Field>
-        <Field label="Short description (optional)">
-          <Input name="description" defaultValue={d?.description ?? edit?.description} />
-        </Field>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Prep (min)">
+        {(errors || save?.error) && (
+          <Notice tone="error">
+            {save?.error ?? "A couple of things need fixing before this can be saved. They're marked below."}
+          </Notice>
+        )}
+
+        <Card as="section" className="space-y-4">
+          <h2 className="font-semibold">Basics</h2>
+          <Field label="Recipe name" error={errors?.name}>
             <Input
-              name="prep_minutes"
-              type="number"
-              min={0}
-              defaultValue={d?.prep_minutes ?? edit?.prep_minutes ?? ""}
+              name="name"
+              defaultValue={val("name", d?.name, edit?.name)}
+              aria-invalid={!!errors?.name || undefined}
+              autoFocus={!!errors?.name}
             />
           </Field>
-          <Field label="Cook (min)">
-            <Input
-              name="cook_minutes"
-              type="number"
-              min={0}
-              defaultValue={d?.cook_minutes ?? edit?.cook_minutes ?? ""}
-            />
+          <Field label="Short description (optional)">
+            <Input name="description" defaultValue={val("description", d?.description, edit?.description)} />
           </Field>
-          <Field label="Servings">
-            <Input name="servings" type="number" min={1} defaultValue={d?.servings ?? edit?.servings ?? 4} />
-          </Field>
-          <Field label="Difficulty">
-            <Select name="difficulty" defaultValue={edit?.difficulty ?? "easy"}>
-              <option>easy</option>
-              <option>medium</option>
-              <option>hard</option>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Field label="Prep (min)">
+              <Input
+                name="prep_minutes"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                defaultValue={val("prep_minutes", d?.prep_minutes, edit?.prep_minutes)}
+              />
+            </Field>
+            <Field label="Cook (min)">
+              <Input
+                name="cook_minutes"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                defaultValue={val("cook_minutes", d?.cook_minutes, edit?.cook_minutes)}
+              />
+            </Field>
+            <Field label="Servings">
+              <Input
+                name="servings"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                defaultValue={val("servings", d?.servings, edit?.servings) ?? "4"}
+              />
+            </Field>
+            <Field label="Difficulty">
+              <Select name="difficulty" defaultValue={val("difficulty", null, edit?.difficulty) ?? "easy"}>
+                <option>easy</option>
+                <option>medium</option>
+                <option>hard</option>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="Who is it for?">
+            <Select name="diet" defaultValue={val("diet", null, edit?.diet) ?? "both"}>
+              <option value="both">Keto and family (with swaps)</option>
+              <option value="family">Family only</option>
+              <option value="keto">Keto only</option>
             </Select>
           </Field>
-        </div>
+          <Field label="Keto vs. family note (optional)">
+            <Input
+              name="keto_swap"
+              defaultValue={val("keto_swap", null, edit?.keto_swap)}
+              placeholder="Keto: skip the bun, use lettuce. Family: regular buns."
+            />
+          </Field>
+          <Field label="Tags, separated by commas (optional)">
+            <Input
+              name="tags"
+              defaultValue={val("tags", d?.tags, edit?.tags)}
+              placeholder="quick, chicken, slow-cooker"
+            />
+          </Field>
+          <Field label="Photo address (optional)" hint="Must start with https://">
+            <Input
+              name="image_url"
+              type="url"
+              defaultValue={val("image_url", d?.image, edit?.image_url)}
+              placeholder="https://…"
+            />
+          </Field>
+        </Card>
 
-        <Field label="Who is it for?">
-          <Select name="diet" defaultValue={edit?.diet ?? "both"}>
-            <option value="both">Keto and family (with swaps)</option>
-            <option value="family">Family only</option>
-            <option value="keto">Keto only</option>
-          </Select>
-        </Field>
-        <Field label="Keto vs. family note (optional)">
-          <Input
-            name="keto_swap"
-            defaultValue={edit?.keto_swap}
-            placeholder="Keto: skip the bun, use lettuce. Family: regular buns."
-          />
-        </Field>
+        <Card as="section" className="space-y-4">
+          <h2 className="font-semibold">Ingredients</h2>
+          <Field
+            label="One per line"
+            error={errors?.ingredients}
+            hint="Start a line with + for family-only items (buns, rice, pasta) so they're still on the shopping list but the recipe knows they aren't for keto."
+          >
+            <Textarea
+              name="ingredients"
+              rows={edit ? 12 : 8}
+              defaultValue={val("ingredients", d?.ingredients, edit?.ingredients)}
+              placeholder={"2 lb ground beef\n1 cup shredded cheddar\n+ 1 pack burger buns"}
+              aria-invalid={!!errors?.ingredients || undefined}
+              autoFocus={!!errors?.ingredients && !errors?.name}
+            />
+          </Field>
+        </Card>
 
-        <Field
-          label="Ingredients, one per line"
-          hint="Start a line with + for family-only items (buns, rice, pasta) so they're still on the shopping list but the recipe knows they aren't for keto."
+        <Card as="section" className="space-y-4">
+          <h2 className="font-semibold">Steps</h2>
+          <Field label="One per line">
+            <Textarea name="steps" rows={edit ? 10 : 6} defaultValue={val("steps", d?.steps, edit?.steps)} />
+          </Field>
+        </Card>
+
+        {/* Phones: Save stays pinned above the tab bar, so you never scroll to find it. */}
+        <div
+          data-actionbar
+          className="fixed inset-x-0 bottom-[calc(3.6rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-surface/95 p-2 backdrop-blur md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"
         >
-          <Textarea
-            name="ingredients"
-            required
-            rows={edit ? 12 : 8}
-            defaultValue={d?.ingredients ?? edit?.ingredients}
-            placeholder={"2 lb ground beef\n1 cup shredded cheddar\n+ 1 pack burger buns"}
-          />
-        </Field>
-
-        <Field label="Steps, one per line">
-          <Textarea name="steps" rows={edit ? 10 : 6} defaultValue={d?.steps ?? edit?.steps} />
-        </Field>
-
-        <Field label="Tags, separated by commas (optional)">
-          <Input name="tags" defaultValue={d?.tags ?? edit?.tags} placeholder="quick, chicken, slow-cooker" />
-        </Field>
-
-        <Field label="Photo address (optional)" hint="Must start with https://">
-          <Input name="image_url" type="url" defaultValue={d?.image ?? edit?.image_url ?? ""} placeholder="https://…" />
-        </Field>
-
-        {save?.error && <Notice tone="error">{save.error}</Notice>}
-        <Button type="submit" variant="primary" size="lg" pending={saving}>
-          {saving ? "Saving…" : edit ? "Save changes" : "Save recipe"}
-        </Button>
+          <Button type="submit" variant="primary" size="lg" pending={saving} className="w-full md:w-auto">
+            {saving ? "Saving…" : edit ? "Save changes" : "Save recipe"}
+          </Button>
+        </div>
       </form>
     </div>
   );
