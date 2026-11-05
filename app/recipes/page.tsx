@@ -3,6 +3,10 @@ import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
+import { formatMinutes } from "@/lib/format";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Recipes" };
 
 async function toggleFavorite(formData: FormData) {
   "use server";
@@ -150,7 +154,7 @@ export default async function RecipesPage({
                   {r.diet === "both" ? "Keto + family" : r.diet === "keto" ? "Keto" : "Family only"}
                 </span>
                 <span className="rounded bg-neutral-100 px-2 py-0.5">
-                  {(r.prep_minutes ?? 0) + (r.cook_minutes ?? 0)} min
+                  {formatMinutes((r.prep_minutes ?? 0) + (r.cook_minutes ?? 0))}
                 </span>
                 <span className="rounded bg-neutral-100 px-2 py-0.5">{r.difficulty}</span>
               </div>

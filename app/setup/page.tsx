@@ -31,6 +31,8 @@ async function join(formData: FormData) {
   redirect("/recipes");
 }
 
+export const metadata = { title: "Set up your household" };
+
 export default async function SetupPage({
   searchParams,
 }: {

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { niceQty, scaleFactor } from "@/lib/scale";
+import { packagesNeeded } from "@/lib/packaging";
+import { splitOptions } from "@/lib/match";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
  *  Items you added by hand are kept. Merges the same ingredient+unit across recipes. */
@@ -76,9 +78,22 @@ export async function generateList(formData: FormData) {
     }
   }
 
+  // "ziti or penne" is already covered when "penne" is on the list too: fold it in.
+  for (const [k, v] of [...merged]) {
+    if (!/\s+or\s+/i.test(v.name)) continue;
+    const options = splitOptions(v.name).map((o) => o.toLowerCase());
+    for (const [k2, v2] of merged) {
+      if (k2 === k || (v2.unit ?? "") !== (v.unit ?? "")) continue;
+      if (!options.includes(v2.name.trim().toLowerCase())) continue;
+      v2.qty = v2.qty == null && v.qty == null ? null : (v2.qty ?? 0) + (v.qty ?? 0);
+      merged.delete(k);
+      break;
+    }
+  }
+
   const { data: saved } = await supabase
     .from("kroger_matches")
-    .select("name_key, upc, product_id, description, price, order_qty")
+    .select("name_key, upc, product_id, description, size, price, confidence, qty_override")
     .eq("household_id", householdId);
   const savedBy = new Map((saved ?? []).map((m) => [m.name_key, m]));
 
@@ -87,12 +102,17 @@ export async function generateList(formData: FormData) {
     const { error } = await supabase.from("shopping_items").insert(
       [...merged.entries()].map(([k, v]) => {
         const m = savedBy.get(v.name.trim().toLowerCase());
+        const qty = v.qty == null ? null : niceQty(v.qty, v.unit);
+        const packs = m
+          ? (m.qty_override ??
+            packagesNeeded({ qty, unit: v.unit, name: v.name }, m.size).packs)
+          : 1;
         return {
           household_id: householdId,
           week_id: week.id,
           name: v.name,
           unit: v.unit,
-          qty: v.qty == null ? null : niceQty(v.qty, v.unit),
+          qty,
           category: v.category,
           to_order: !wasOff.has(k),
           manual: false,
@@ -100,7 +120,10 @@ export async function generateList(formData: FormData) {
           kroger_product_id: m?.product_id ?? null,
           kroger_description: m?.description ?? null,
           kroger_price: m?.price ?? null,
-          order_qty: m?.order_qty ?? 1,
+          kroger_size: m?.size ?? null,
+          match_confidence: m?.confidence ?? null,
+          order_qty: packs,
+          order_qty_manual: m?.qty_override != null,
         };
       })
     );
@@ -146,16 +169,27 @@ export async function addItem(formData: FormData) {
   const qty = Number(formData.get("qty"));
   const { data: m } = await supabase
     .from("kroger_matches")
-    .select("upc, product_id, description, price, order_qty")
+    .select("upc, product_id, description, size, price, confidence, qty_override")
     .eq("household_id", householdId)
     .eq("name_key", name.toLowerCase())
     .maybeSingle();
+  const addQty = Number(formData.get("qty"));
+  const packs = m
+    ? (m.qty_override ??
+      packagesNeeded(
+        { qty: Number.isFinite(addQty) && addQty > 0 ? addQty : null, unit: String(formData.get("unit") ?? "").trim() || null, name },
+        m.size
+      ).packs)
+    : 1;
   await supabase.from("shopping_items").insert({
     kroger_upc: m?.upc ?? null,
     kroger_product_id: m?.product_id ?? null,
     kroger_description: m?.description ?? null,
     kroger_price: m?.price ?? null,
-    order_qty: m?.order_qty ?? 1,
+    kroger_size: m?.size ?? null,
+    match_confidence: m?.confidence ?? null,
+    order_qty: packs,
+    order_qty_manual: m?.qty_override != null,
     household_id: householdId,
     week_id: week!.id,
     name,

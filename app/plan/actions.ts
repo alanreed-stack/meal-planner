@@ -96,6 +96,14 @@ export async function setMealProtein(formData: FormData) {
   revalidatePath("/plan");
 }
 
+export async function setDinnerTime(formData: FormData) {
+  const { supabase, householdId } = await requireHousehold();
+  const t = String(formData.get("time") ?? "");
+  if (!/^\d{2}:\d{2}$/.test(t)) return;
+  await supabase.from("households").update({ dinner_time: t }).eq("id", householdId);
+  revalidatePath("/plan");
+}
+
 export async function setDefaultProtein(formData: FormData) {
   const { supabase, householdId } = await requireHousehold();
   const n = Number(formData.get("lbs"));

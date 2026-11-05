@@ -5,6 +5,12 @@ import { addDays, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { addItem, deleteItem, generateList, toggleItem } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
+import { formatAmount, formatIngredient } from "@/lib/format";
+import { packagesNeeded } from "@/lib/packaging";
+import { similarTo } from "@/lib/similar";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Shopping" };
 
 const CATEGORIES = ["produce", "meat", "dairy", "bakery", "frozen", "pantry", "other"];
 
@@ -47,7 +53,7 @@ export default async function ShoppingPage({
     ? await Promise.all([
         supabase
           .from("shopping_items")
-          .select("id, name, qty, unit, category, to_order, manual, kroger_upc, kroger_description, kroger_price, order_qty, sent_at")
+          .select("id, name, qty, unit, category, to_order, manual, kroger_upc, kroger_description, kroger_price, kroger_size, match_confidence, order_qty, order_qty_manual, sent_at")
           .eq("week_id", week.id)
           .order("name"),
         supabase
@@ -207,65 +213,96 @@ export default async function ShoppingPage({
           <section key={g.category} className="mb-5">
             <h2 className="mb-1 text-sm font-semibold uppercase text-neutral-500">{g.category}</h2>
             <ul className="divide-y rounded-xl border bg-white">
-              {g.rows.map((i) => (
-                <li key={i.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                  <form action={toggleItem}>
-                    <input type="hidden" name="id" value={i.id} />
-                    <input type="hidden" name="to_order" value={String(i.to_order)} />
-                    <button
-                      aria-label={i.to_order ? "Don't order" : "Order"}
-                      className={`h-6 w-6 rounded border text-xs ${
-                        i.to_order ? "bg-green-700 text-white" : "bg-white"
-                      }`}
-                    >
-                      {i.to_order ? "✓" : ""}
-                    </button>
-                  </form>
-                  <span className={i.to_order ? "" : "text-neutral-400 line-through"}>
-                    {i.qty != null ? `${i.qty} ` : ""}
-                    {i.unit ? `${i.unit} ` : ""}
-                    {i.name}
-                  </span>
-                  {i.manual && <span className="rounded bg-neutral-100 px-1.5 text-xs">added</span>}
-                  {hasStore && i.to_order && (
-                    <div className="ml-2 flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-neutral-600">
-                      {i.kroger_upc ? (
-                        <span className="truncate" title={i.kroger_description ?? ""}>
-                          → {i.kroger_description}
-                          {i.kroger_price ? ` ($${Number(i.kroger_price).toFixed(2)})` : ""}
-                        </span>
-                      ) : (
-                        <span className="text-amber-700">no Kroger match yet</span>
-                      )}
-                      <Link href={`/shopping/match/${i.id}`} className="underline">
-                        {i.kroger_upc ? "change" : "find"}
-                      </Link>
-                      {i.kroger_upc && (
-                        <form action={setQty} className="flex items-center gap-1">
-                          <input type="hidden" name="id" value={i.id} />
-                          <input
-                            name="qty"
-                            type="number"
-                            min={1}
-                            max={50}
-                            defaultValue={i.order_qty}
-                            className="w-12 rounded border px-1 py-0.5"
-                            aria-label="Quantity to order"
-                          />
-                          <button className="underline">set</button>
-                        </form>
-                      )}
-                      {i.sent_at && <span className="rounded bg-green-100 px-1.5">in cart</span>}
+              {g.rows.map((i) => {
+                const qty = i.qty == null ? null : Number(i.qty);
+                const pack = i.kroger_upc
+                  ? packagesNeeded({ qty, unit: i.unit, name: i.name }, i.kroger_size)
+                  : null;
+                const similar = similarTo(i, list);
+                const needText = qty != null ? `Need ${formatAmount(qty, i.unit)}` : "";
+                return (
+                  <li key={i.id} className="px-3 py-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <form action={toggleItem}>
+                        <input type="hidden" name="id" value={i.id} />
+                        <input type="hidden" name="to_order" value={String(i.to_order)} />
+                        <button
+                          aria-label={i.to_order ? "Don't order" : "Order"}
+                          className={`h-6 w-6 rounded border text-xs ${
+                            i.to_order ? "bg-green-700 text-white" : "bg-white"
+                          }`}
+                        >
+                          {i.to_order ? "✓" : ""}
+                        </button>
+                      </form>
+                      <span className={i.to_order ? "" : "text-neutral-400 line-through"}>
+                        {formatIngredient(qty, i.unit, i.name)}
+                      </span>
+                      {i.manual && <span className="rounded bg-neutral-100 px-1.5 text-xs">added</span>}
+                      <form action={deleteItem} className="ml-auto">
+                        <input type="hidden" name="id" value={i.id} />
+                        <button aria-label="Delete" className="text-neutral-400 hover:text-red-700">
+                          ✕
+                        </button>
+                      </form>
                     </div>
-                  )}
-                  <form action={deleteItem} className="ml-auto">
-                    <input type="hidden" name="id" value={i.id} />
-                    <button aria-label="Delete" className="text-neutral-400 hover:text-red-700">
-                      ✕
-                    </button>
-                  </form>
-                </li>
-              ))}
+                    {similar && (
+                      <p className="ml-9 mt-0.5 text-xs text-neutral-500">similar to {similar}</p>
+                    )}
+                    {hasStore && i.to_order && (
+                      <div className="ml-9 mt-1 space-y-1 text-xs text-neutral-600">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {i.kroger_upc ? (
+                            <span title={i.kroger_description ?? ""}>
+                              → {i.kroger_description}
+                              {i.kroger_price ? ` ($${Number(i.kroger_price).toFixed(2)})` : ""}
+                            </span>
+                          ) : (
+                            <span className="text-amber-700">no Kroger match yet</span>
+                          )}
+                          {i.match_confidence === "low" && (
+                            <span className="rounded bg-amber-100 px-1.5 text-amber-800">
+                              low confidence, check this
+                            </span>
+                          )}
+                          <Link href={`/shopping/match/${i.id}`} className="underline">
+                            {i.kroger_upc ? "change" : "find"}
+                          </Link>
+                        </div>
+                        {i.kroger_upc && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>
+                              {i.order_qty_manual
+                                ? `${needText ? needText + " · " : ""}you set ${i.order_qty}`
+                                : pack?.note || `Buying ${i.order_qty}`}
+                            </span>
+                            {!i.order_qty_manual && pack?.flag && (
+                              <span className="rounded bg-amber-100 px-1.5 text-amber-800">
+                                check quantity
+                              </span>
+                            )}
+                            <form action={setQty} className="flex items-center gap-1">
+                              <input type="hidden" name="id" value={i.id} />
+                              <input
+                                name="qty"
+                                type="number"
+                                min={1}
+                                max={50}
+                                defaultValue={i.order_qty_manual ? i.order_qty : ""}
+                                placeholder={String(i.order_qty)}
+                                className="w-12 rounded border px-1 py-0.5"
+                                aria-label="Packages to buy (empty for automatic)"
+                              />
+                              <button className="underline">set</button>
+                            </form>
+                            {i.sent_at && <span className="rounded bg-green-100 px-1.5">in cart</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

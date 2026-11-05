@@ -96,6 +96,7 @@ export type Product = {
   brand: string;
   size: string;
   price: number | null;
+  categories: string[];
 };
 
 export async function searchProducts(term: string, locationId: string, limit = 6): Promise<Product[]> {
@@ -110,6 +111,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
       upc: string;
       description: string;
       brand?: string;
+      categories?: string[];
       items?: { size?: string; price?: { regular?: number; promo?: number } }[];
     }) => {
       const item = p.items?.[0];
@@ -121,6 +123,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
         brand: p.brand ?? "",
         size: item?.size ?? "",
         price,
+        categories: p.categories ?? [],
       };
     }
   );

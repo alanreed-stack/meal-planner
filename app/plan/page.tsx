@@ -2,7 +2,19 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
-import { addMeal, copyLastWeek, removeMeal, setDefaultProtein, setMealProtein, setMode } from "./actions";
+import {
+  addMeal,
+  copyLastWeek,
+  removeMeal,
+  setDefaultProtein,
+  setDinnerTime,
+  setMealProtein,
+  setMode,
+} from "./actions";
+import { clockBefore } from "@/lib/format";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "This week" };
 import { proteinLbs } from "@/lib/scale";
 
 const SLOTS = ["breakfast", "lunch", "dinner"] as const;
@@ -34,16 +46,17 @@ export default async function PlanPage({
   const { data: meals } = week
     ? await supabase
         .from("planned_meals")
-        .select("id, day, slot, recipe_id, protein_lbs, recipes(name, diet)")
+        .select("id, day, slot, recipe_id, protein_lbs, recipes(name, diet, prep_minutes, cook_minutes, tags)")
         .eq("week_id", week.id)
     : { data: [] };
 
   const { data: hh } = await supabase
     .from("households")
-    .select("default_protein_lbs")
+    .select("default_protein_lbs, dinner_time")
     .eq("id", householdId)
     .single();
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
+  const dinnerTime = String(hh?.dinner_time ?? "18:00:00");
 
   // How much meat each planned recipe has as written, so we can show the scaling.
   const plannedIds = [...new Set((meals ?? []).map((m) => m.recipe_id).filter(Boolean) as string[])];
@@ -105,6 +118,19 @@ export default async function PlanPage({
           </span>
         </form>
 
+        <form action={setDinnerTime} className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <label htmlFor="dinner-time">Dinner at:</label>
+          <input
+            id="dinner-time"
+            name="time"
+            type="time"
+            defaultValue={dinnerTime.slice(0, 5)}
+            className="rounded border px-2 py-1"
+          />
+          <button className="rounded border px-2 py-1">Save</button>
+          <span className="text-xs text-neutral-500">Used for &ldquo;start by&rdquo; times on slow-cooker meals.</span>
+        </form>
+
         <form action={setMode} className="mb-5 flex gap-2 text-sm">
           <input type="hidden" name="week" value={monday} />
           <button
@@ -134,7 +160,16 @@ export default async function PlanPage({
                     dayMeals
                       .filter((m) => m.slot === slot)
                       .map((m) => {
-                        const r = m.recipes as unknown as { name: string; diet: string } | null;
+                        const r = m.recipes as unknown as {
+                          name: string;
+                          diet: string;
+                          prep_minutes: number | null;
+                          cook_minutes: number | null;
+                          tags: string[];
+                        } | null;
+                        const total = (r?.prep_minutes ?? 0) + (r?.cook_minutes ?? 0);
+                        const longCook =
+                          slot === "dinner" && !!r && ((r.cook_minutes ?? 0) >= 120 || r.tags?.includes("slow-cooker"));
                         const needsKeto = mode === "home" && r?.diet === "family";
                         return (
                           <li key={m.id} className="flex items-center gap-2">
@@ -142,6 +177,11 @@ export default async function PlanPage({
                             <Link href={`/recipes/${m.recipe_id}`} className="hover:underline">
                               {r?.name ?? "(deleted recipe)"}
                             </Link>
+                            {longCook && (
+                              <span className="rounded bg-blue-50 px-1.5 text-xs text-blue-800">
+                                start by {clockBefore(dinnerTime, total)}
+                              </span>
+                            )}
                             {m.recipe_id && baseLbs.has(m.recipe_id) && (
                               <form action={setMealProtein} className="flex items-center gap-1 text-xs">
                                 <input type="hidden" name="id" value={m.id} />

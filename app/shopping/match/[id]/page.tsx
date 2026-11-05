@@ -4,6 +4,9 @@ import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { searchProducts, type Product } from "@/lib/kroger";
 import { chooseProduct } from "../../kroger-actions";
+import { splitOptions } from "@/lib/match";
+
+export const metadata = { title: "Pick a Kroger product" };
 
 export default async function MatchPage({
   params,
@@ -28,7 +31,7 @@ export default async function MatchPage({
     .eq("id", householdId)
     .single();
 
-  const term = q?.trim() || item.name;
+  const term = q?.trim() || splitOptions(item.name)[0] || item.name;
   let results: Product[] = [];
   let failed = false;
   if (h?.kroger_location_id) {
@@ -72,6 +75,7 @@ export default async function MatchPage({
                   value={[p.brand, p.description, p.size].filter(Boolean).join(" · ")}
                 />
                 <input type="hidden" name="price" value={p.price ?? ""} />
+                <input type="hidden" name="size" value={p.size} />
                 <button className="rounded border px-2 py-1">Use this</button>
               </form>
             </li>

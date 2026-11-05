@@ -3,6 +3,20 @@ import { notFound, redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { niceQty, proteinLbs, scaleFactor } from "@/lib/scale";
+import { formatIngredient, formatMinutes } from "@/lib/format";
+import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("recipes").select("name").eq("id", id).maybeSingle();
+  return { title: data?.name ?? "Recipe" };
+}
 
 async function archiveRecipe(formData: FormData) {
   "use server";
@@ -58,7 +72,8 @@ export default async function RecipePage({
         <h1 className="mt-2 text-2xl font-bold">{r.name}</h1>
         <p className="text-neutral-600">{r.description}</p>
         <p className="mt-2 text-sm text-neutral-500">
-          Prep {r.prep_minutes} min · Cook {r.cook_minutes} min · Serves about {Math.round(r.servings * factor)} · {r.difficulty}
+          Prep {formatMinutes(r.prep_minutes)} · Cook {formatMinutes(r.cook_minutes)} · Serves about{" "}
+          {Math.round(r.servings * factor)} · {r.difficulty}
         </p>
 
         {r.keto_swap && (
@@ -97,7 +112,7 @@ export default async function RecipePage({
         <ul className="mt-2 space-y-1 text-sm">
           {list.map((i) => (
             <li key={i.id}>
-              {i.qty != null ? niceQty(i.qty * factor, i.unit) : ""} {i.unit ?? ""} {i.name}
+              {formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name)}
               {i.family_only && (
                 <span className="ml-2 rounded bg-amber-100 px-1.5 text-xs">family only</span>
               )}
