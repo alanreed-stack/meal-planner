@@ -21,10 +21,11 @@ export async function priceRecipe(formData: FormData) {
   const locationId = hh?.kroger_location_id as string | null;
   if (!locationId || !id) return;
 
-  const [{ data: ings }, { data: have }, { data: staples }] = await Promise.all([
-    supabase.from("recipe_ingredients").select("name, category").eq("recipe_id", id),
-    supabase.from("kroger_matches").select("name_key, price").eq("household_id", householdId),
-    supabase.from("pantry_staples").select("name_key").eq("household_id", householdId),
+  const { data: ings } = await supabase.from("recipe_ingredients").select("name, category").eq("recipe_id", id);
+  const keys = (ings ?? []).map((i) => costKey(i.name));
+  const [{ data: have }, { data: staples }] = await Promise.all([
+    supabase.from("kroger_matches").select("name_key, price").eq("household_id", householdId).in("name_key", keys),
+    supabase.from("pantry_staples").select("name_key").eq("household_id", householdId).in("name_key", keys),
   ]);
   const priced = new Set((have ?? []).filter((m) => m.price != null).map((m) => m.name_key));
   const skip = new Set((staples ?? []).map((s) => s.name_key));

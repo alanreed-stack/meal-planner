@@ -105,7 +105,6 @@
   --color-diet-family-soft: var(--diet-family-soft);
 
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 /* Three corner sizes and nothing else: inputs and chips, buttons, cards. */

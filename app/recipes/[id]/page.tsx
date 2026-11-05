@@ -13,7 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import Link from "next/link";
-import { estimateCost, money, type SavedMatch } from "@/lib/recipe-cost";
+import { costKey, estimateCost, money, type SavedMatch } from "@/lib/recipe-cost";
 import { priceRecipe } from "./price-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { mainProtein } from "@/lib/protein";
@@ -68,7 +68,7 @@ export default async function RecipePage({
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("*")
+    .select("id, name, qty, unit, category, family_only")
     .eq("recipe_id", id)
     .order("sort");
 
@@ -79,7 +79,11 @@ export default async function RecipePage({
   const factor = scaleFactor(list, target);
 
   const [{ data: saved }, { data: stapleRows }] = await Promise.all([
-    supabase.from("kroger_matches").select("name_key, price, size, description").eq("household_id", householdId),
+    supabase
+      .from("kroger_matches")
+      .select("name_key, price, size, description")
+      .eq("household_id", householdId)
+      .in("name_key", list.map((i) => costKey(i.name))),
     supabase.from("pantry_staples").select("name_key").eq("household_id", householdId),
   ]);
   const matches = new Map<string, SavedMatch>(
@@ -114,7 +118,7 @@ export default async function RecipePage({
         <div className="mt-1 overflow-hidden rounded-lg">
           {r.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={r.image_url} alt="" referrerPolicy="no-referrer" className="h-52 w-full object-cover" />
+            <img src={r.image_url} alt="" fetchPriority="high" referrerPolicy="no-referrer" className="h-52 w-full object-cover" />
           ) : (
             <RecipeTile protein={protein} className="h-40" />
           )}
