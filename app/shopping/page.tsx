@@ -59,7 +59,8 @@ export default async function ShoppingPage({
         supabase
           .from("planned_meals")
           .select("id", { count: "exact", head: true })
-          .eq("week_id", week.id),
+          .eq("week_id", week.id)
+          .eq("kind", "recipe"),
       ])
     : [{ data: [] }, { count: 0 }];
 

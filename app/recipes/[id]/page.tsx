@@ -6,6 +6,8 @@ import { niceQty, proteinLbs, scaleFactor } from "@/lib/scale";
 import { formatIngredient, formatMinutes } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
+import { addDays, dayLabel, mondayOf, todayET } from "@/lib/dates";
+import { addMeal } from "@/app/plan/actions";
 
 export async function generateMetadata({
   params,
@@ -57,6 +59,8 @@ export default async function RecipePage({
     .eq("recipe_id", id)
     .order("sort");
 
+  const today = todayET();
+  const monday = mondayOf(today);
   const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
   const base = proteinLbs(list);
   const factor = scaleFactor(list, target);
@@ -71,6 +75,31 @@ export default async function RecipePage({
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{r.name}</h1>
         <p className="text-neutral-600">{r.description}</p>
+
+        {!r.archived && (
+          <details className="mt-3 rounded-lg border bg-white p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-green-800">+ Add to this week</summary>
+            <form action={addMeal} className="mt-3 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="go" value="1" />
+              <input type="hidden" name="recipe_id" value={r.id} />
+              <select name="day" defaultValue={today} className="rounded border px-2 py-1" aria-label="Day">
+                {Array.from({ length: 14 }, (_, i) => addDays(monday, i)).map((d) => (
+                  <option key={d} value={d}>
+                    {dayLabel(d)}
+                    {d === today ? " (today)" : ""}
+                  </option>
+                ))}
+              </select>
+              <select name="slot" defaultValue="dinner" className="rounded border px-2 py-1" aria-label="Meal">
+                <option>dinner</option>
+                <option>lunch</option>
+                <option>breakfast</option>
+              </select>
+              <button className="rounded bg-green-700 px-3 py-1 text-white">Add to plan</button>
+            </form>
+            <p className="mt-2 text-xs text-neutral-500">This week and next week are listed.</p>
+          </details>
+        )}
         <p className="mt-2 text-sm text-neutral-500">
           Prep {formatMinutes(r.prep_minutes)} · Cook {formatMinutes(r.cook_minutes)} · Serves about{" "}
           {Math.round(r.servings * factor)} · {r.difficulty}
