@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
-import { addToCart, refreshToken, searchProducts } from "@/lib/kroger";
+import { addToCart, KrogerError, refreshToken, searchProducts } from "@/lib/kroger";
 import { pickProduct } from "@/lib/match";
 import { packagesNeeded } from "@/lib/packaging";
 
@@ -249,17 +249,19 @@ export async function setQty(formData: FormData) {
 export async function sendToCart(formData: FormData) {
   const weekStart = String(formData.get("week"));
   const { supabase, user, householdId } = await requireHousehold();
+  // Always come back to the week you were looking at.
+  const back = (status: string) => `/shopping?kroger=${status}&w=${weekStart}`;
 
   const { data: conn } = await supabase
     .from("kroger_connections")
     .select("access_token, refresh_token, expires_at")
     .eq("user_id", user.id)
     .maybeSingle();
-  if (!conn) redirect("/shopping?kroger=notconnected");
+  if (!conn) redirect(back("notconnected"));
 
   let token = conn.access_token;
   if (new Date(conn.expires_at).getTime() < Date.now() + 60_000) {
-    if (!conn.refresh_token) redirect("/shopping?kroger=notconnected");
+    if (!conn.refresh_token) redirect(back("expired"));
     try {
       const t = await refreshToken(conn.refresh_token);
       token = t.access_token;
@@ -273,7 +275,8 @@ export async function sendToCart(formData: FormData) {
         })
         .eq("user_id", user.id);
     } catch {
-      redirect("/shopping?kroger=notconnected");
+      // The refresh token no longer works, so the login has to be done again.
+      redirect(back("expired"));
     }
   }
 
@@ -283,7 +286,7 @@ export async function sendToCart(formData: FormData) {
     .eq("household_id", householdId)
     .eq("week_start", weekStart)
     .maybeSingle();
-  if (!week) redirect("/shopping");
+  if (!week) redirect(`/shopping?w=${weekStart}`);
 
   await recalcQuantities(supabase, week.id);
 
@@ -294,22 +297,24 @@ export async function sendToCart(formData: FormData) {
     .eq("to_order", true)
     .not("kroger_upc", "is", null)
     .is("sent_at", null);
-  if (!items?.length) redirect("/shopping?kroger=nothing");
+  if (!items?.length) redirect(back("nothing"));
 
-  let ok = true;
+  let failure: "expired" | "cartfail" | null = null;
   try {
     await addToCart(
       token,
       items.map((i) => ({ upc: i.kroger_upc as string, quantity: i.order_qty }))
     );
-  } catch {
-    ok = false;
+  } catch (e) {
+    // 401/403 means Kroger no longer accepts our login. Anything else is a problem with the request.
+    failure = e instanceof KrogerError && (e.status === 401 || e.status === 403) ? "expired" : "cartfail";
   }
-  if (!ok) redirect("/shopping?kroger=cartfail");
+  // Nothing is marked as sent unless Kroger accepted the cart, so you can simply try again.
+  if (failure) redirect(back(failure));
 
   await supabase
     .from("shopping_items")
     .update({ sent_at: new Date().toISOString() })
     .in("id", items.map((i) => i.id));
-  redirect(`/shopping?kroger=sent&n=${items.length}`);
+  redirect(`${back("sent")}&n=${items.length}`);
 }

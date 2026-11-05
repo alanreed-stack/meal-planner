@@ -19,6 +19,7 @@ export function Nav({ inviteCode }: { inviteCode?: string }) {
         <Link href="/plan">This week</Link>
         <Link href="/shopping">Shopping</Link>
         <Link href="/recipes">Recipes</Link>
+        <Link href="/settings">Settings</Link>
         <span className="flex-1" />
         {inviteCode && (
           <span className="hidden text-neutral-500 sm:inline">

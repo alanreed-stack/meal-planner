@@ -129,6 +129,12 @@ export async function searchProducts(term: string, locationId: string, limit = 6
   );
 }
 
+export class KrogerError extends Error {
+  constructor(public status: number) {
+    super(`Kroger cart error ${status}`);
+  }
+}
+
 export async function addToCart(userToken: string, items: { upc: string; quantity: number }[]) {
   const res = await fetch(`${API}/cart/add`, {
     method: "PUT",
@@ -136,5 +142,5 @@ export async function addToCart(userToken: string, items: { upc: string; quantit
     body: JSON.stringify({ items: items.map((i) => ({ ...i, modality: "PICKUP" })) }),
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`Kroger cart error ${res.status}`);
+  if (!res.ok) throw new KrogerError(res.status);
 }

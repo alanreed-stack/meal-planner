@@ -34,3 +34,8 @@ export function weekLabel(monday: string): string {
     });
   return `${fmt(monday)} – ${fmt(addDays(monday, 6))}`;
 }
+
+/** True when a timestamp (ISO string) is already behind us. */
+export function isPast(iso: string): boolean {
+  return new Date(iso).getTime() < Date.now();
+}

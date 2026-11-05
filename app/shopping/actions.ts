@@ -42,6 +42,13 @@ export async function generateList(formData: FormData) {
     `${name.trim().toLowerCase()}|${(unit ?? "").trim().toLowerCase()}`;
   const wasOff = new Set((old ?? []).filter((o) => !o.to_order).map((o) => key(o.name, o.unit)));
 
+  // Things the household always has: left unchecked so they don't get ordered every week.
+  const { data: staples } = await supabase
+    .from("pantry_staples")
+    .select("name_key")
+    .eq("household_id", householdId);
+  const alwaysHave = new Set((staples ?? []).map((s) => s.name_key));
+
   const merged = new Map<
     string,
     { name: string; unit: string | null; qty: number | null; category: string }
@@ -114,7 +121,7 @@ export async function generateList(formData: FormData) {
           unit: v.unit,
           qty,
           category: v.category,
-          to_order: !wasOff.has(k),
+          to_order: !wasOff.has(k) && !alwaysHave.has(v.name.trim().toLowerCase()),
           manual: false,
           kroger_upc: m?.upc ?? null,
           kroger_product_id: m?.product_id ?? null,
@@ -199,4 +206,24 @@ export async function addItem(formData: FormData) {
     manual: true,
   });
   revalidatePath("/shopping");
+}
+
+/** In-store checklist: marks an item as picked up. No page refresh needed. */
+export async function setPicked(id: string, picked: boolean) {
+  const { supabase } = await requireHousehold();
+  await supabase.from("shopping_items").update({ picked }).eq("id", id);
+}
+
+/** Starts the in-store checklist over for a week. */
+export async function resetPicked(formData: FormData) {
+  const weekStart = String(formData.get("week"));
+  const { supabase, householdId } = await requireHousehold();
+  const { data: week } = await supabase
+    .from("weeks")
+    .select("id")
+    .eq("household_id", householdId)
+    .eq("week_start", weekStart)
+    .maybeSingle();
+  if (week) await supabase.from("shopping_items").update({ picked: false }).eq("week_id", week.id);
+  revalidatePath("/shopping/store");
 }

@@ -4,7 +4,9 @@ import { exchangeCode } from "@/lib/kroger";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const back = (q: string) => NextResponse.redirect(`${origin}/shopping?${q}`);
+  const week = request.cookies.get("kroger_week")?.value;
+  const back = (q: string) =>
+    NextResponse.redirect(`${origin}/shopping?${q}${week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? `&w=${week}` : ""}`);
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -32,5 +34,6 @@ export async function GET(request: NextRequest) {
   }
   const res = back("kroger=connected");
   res.cookies.delete("kroger_state");
+  res.cookies.delete("kroger_week");
   return res;
 }

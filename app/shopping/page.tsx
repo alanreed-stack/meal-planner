@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
-import { addDays, mondayOf, todayET, weekLabel } from "@/lib/dates";
+import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { addItem, deleteItem, generateList, toggleItem } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
 import { formatAmount, formatIngredient } from "@/lib/format";
 import { packagesNeeded } from "@/lib/packaging";
 import { similarTo } from "@/lib/similar";
+import { splitOptions } from "@/lib/match";
+import { addStaple } from "../settings/actions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Shopping" };
@@ -29,8 +31,11 @@ export default async function ShoppingPage({
       .select("kroger_location_id, kroger_store_name")
       .eq("id", householdId)
       .single(),
-    supabase.from("kroger_connections").select("user_id").maybeSingle(),
+    supabase.from("kroger_connections").select("user_id, expires_at, refresh_token").maybeSingle(),
   ]);
+  // Connected, but the saved login ran out and can't be renewed on its own.
+  const connExpired =
+    !!conn && isPast(conn.expires_at) && !conn.refresh_token;
   const hasStore = !!hh?.kroger_location_id;
   let stores: Store[] = [];
   let storeError = false;
@@ -66,6 +71,53 @@ export default async function ShoppingPage({
 
   const list = items ?? [];
   const toOrder = list.filter((i) => i.to_order).length;
+
+  // Estimated total for what is checked: Kroger's price for the matched product x packages to buy.
+  const priced = list.filter((i) => i.to_order && i.kroger_upc && i.kroger_price != null);
+  const total = priced.reduce((sum, i) => sum + Number(i.kroger_price) * i.order_qty, 0);
+  const unpriced = toOrder - priced.length;
+
+  // What each item is for: the planned recipes this week that use it.
+  const { data: planned } = week
+    ? await supabase
+        .from("planned_meals")
+        .select("day, recipe_id, recipes(name)")
+        .eq("week_id", week.id)
+        .eq("kind", "recipe")
+        .not("recipe_id", "is", null)
+        .order("day")
+    : { data: [] };
+  const plannedIds = [...new Set((planned ?? []).map((p) => p.recipe_id).filter(Boolean) as string[])];
+  const { data: usedIngs } = plannedIds.length
+    ? await supabase.from("recipe_ingredients").select("recipe_id, name").in("recipe_id", plannedIds)
+    : { data: [] };
+  const usedBy = (itemName: string) => {
+    const k = itemName.trim().toLowerCase();
+    const ids = new Set(
+      (usedIngs ?? [])
+        .filter(
+          (u) =>
+            u.name.trim().toLowerCase() === k ||
+            splitOptions(u.name).some((o) => o.toLowerCase() === k)
+        )
+        .map((u) => u.recipe_id)
+    );
+    return (planned ?? [])
+      .filter((p) => p.recipe_id && ids.has(p.recipe_id))
+      .map((p) => {
+        const name = (p.recipes as unknown as { name: string } | null)?.name ?? "a recipe";
+        const dow = new Date(p.day + "T00:00:00Z").toLocaleDateString("en-US", {
+          weekday: "short",
+          timeZone: "UTC",
+        });
+        return `${name} (${dow})`;
+      });
+  };
+  const { data: stapleRows } = await supabase
+    .from("pantry_staples")
+    .select("name_key")
+    .eq("household_id", householdId);
+  const staples = new Set((stapleRows ?? []).map((s) => s.name_key));
   const groups = CATEGORIES.map((c) => ({
     category: c,
     rows: list.filter((i) => (CATEGORIES.includes(i.category) ? i.category : "other") === c),
@@ -95,7 +147,13 @@ export default async function ShoppingPage({
           <span className="text-neutral-600">
             {mealCount ?? 0} planned meal{mealCount === 1 ? "" : "s"} · {toOrder} of {list.length} items to
             order
+            {priced.length > 0 && ` · about $${total.toFixed(2)}`}
           </span>
+          {list.length > 0 && (
+            <Link href={`/shopping/store?w=${monday}`} className="ml-auto rounded border px-3 py-1.5">
+              In-store checklist
+            </Link>
+          )}
         </div>
         {list.length > 0 && (
           <p className="mb-4 text-xs text-neutral-500">
@@ -118,6 +176,15 @@ export default async function ShoppingPage({
           {kroger === "notconnected" && (
             <p className="mb-2 rounded bg-amber-50 px-2 py-1">Connect your Kroger account first.</p>
           )}
+          {(kroger === "expired" || connExpired) && (
+            <p className="mb-2 rounded bg-amber-50 px-2 py-1">
+              Your Kroger connection expired, so nothing was sent. Nothing is lost.{" "}
+              <a href={`/api/kroger/connect?w=${monday}`} className="font-medium underline">
+                Reconnect Kroger
+              </a>{" "}
+              and try again.
+            </p>
+          )}
           {kroger === "nothing" && (
             <p className="mb-2 rounded bg-amber-50 px-2 py-1">
               Nothing new to send. Match some items first.
@@ -125,7 +192,8 @@ export default async function ShoppingPage({
           )}
           {kroger === "cartfail" && (
             <p className="mb-2 rounded bg-red-50 px-2 py-1 text-red-700">
-              Kroger wouldn&apos;t take the cart. Try reconnecting.
+              Kroger didn&apos;t accept the cart, and nothing was marked as sent. Your login is fine. Try again in
+              a minute, and check any rows marked &ldquo;low confidence&rdquo; or &ldquo;check quantity&rdquo;.
             </p>
           )}
           {kroger === "sent" && (
@@ -153,7 +221,7 @@ export default async function ShoppingPage({
             >
               Open Kroger cart ↗
             </a>
-            <a href="/api/kroger/connect" className="rounded border px-3 py-1">
+            <a href={`/api/kroger/connect?w=${monday}`} className="rounded border px-3 py-1">
               {conn ? "Reconnect" : "Connect Kroger"}
             </a>
           </div>
@@ -206,6 +274,14 @@ export default async function ShoppingPage({
                   Send checked items to Kroger cart
                 </button>
               </form>
+              {priced.length > 0 && (
+                <p className="w-full text-xs text-neutral-600">
+                  Estimated total <b>${total.toFixed(2)}</b> for {priced.length} priced item
+                  {priced.length === 1 ? "" : "s"}
+                  {unpriced > 0 ? `, plus ${unpriced} with no match yet` : ""}. Kroger&apos;s price per package
+                  times how many you&apos;re buying. Tax, fees and substitutions aren&apos;t included.
+                </p>
+              )}
             </div>
           )}
         </section>
@@ -220,6 +296,8 @@ export default async function ShoppingPage({
                   ? packagesNeeded({ qty, unit: i.unit, name: i.name }, i.kroger_size)
                   : null;
                 const similar = similarTo(i, list);
+                const uses = usedBy(i.name);
+                const isStaple = staples.has(i.name.trim().toLowerCase());
                 const needText = qty != null ? `Need ${formatAmount(qty, i.unit)}` : "";
                 return (
                   <li key={i.id} className="px-3 py-2 text-sm">
@@ -250,13 +328,39 @@ export default async function ShoppingPage({
                     {similar && (
                       <p className="ml-9 mt-0.5 text-xs text-neutral-500">similar to {similar}</p>
                     )}
+                    <details className="ml-9 mt-0.5 text-xs text-neutral-600">
+                      <summary className="cursor-pointer text-neutral-500 hover:text-neutral-800">
+                        {uses.length
+                          ? `for ${uses.length} meal${uses.length === 1 ? "" : "s"}`
+                          : i.manual
+                            ? "added by hand"
+                            : "what's this for?"}
+                        {isStaple && " · we always have this"}
+                      </summary>
+                      <div className="mt-1 space-y-1">
+                        {uses.length > 0 ? (
+                          <p>{uses.join(", ")}</p>
+                        ) : (
+                          <p>{i.manual ? "You added this yourself." : "No planned meal uses this now."}</p>
+                        )}
+                        {!isStaple && (
+                          <form action={addStaple}>
+                            <input type="hidden" name="name" value={i.name} />
+                            <input type="hidden" name="item_id" value={i.id} />
+                            <button className="underline">We always have this</button>
+                          </form>
+                        )}
+                      </div>
+                    </details>
                     {hasStore && i.to_order && (
                       <div className="ml-9 mt-1 space-y-1 text-xs text-neutral-600">
                         <div className="flex flex-wrap items-center gap-2">
                           {i.kroger_upc ? (
                             <span title={i.kroger_description ?? ""}>
                               → {i.kroger_description}
-                              {i.kroger_price ? ` ($${Number(i.kroger_price).toFixed(2)})` : ""}
+                              {i.kroger_price
+                                ? ` ($${Number(i.kroger_price).toFixed(2)}${i.order_qty > 1 ? ` × ${i.order_qty}` : ""})`
+                                : ""}
                             </span>
                           ) : (
                             <span className="text-amber-700">no Kroger match yet</span>
