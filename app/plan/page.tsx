@@ -11,7 +11,6 @@ import {
   addMeal,
   copyLastWeek,
   moveMeal,
-  rateMeal,
   removeMeal,
   savePlanSettings,
   setMealProtein,
@@ -20,12 +19,13 @@ import {
 import { AddMeal, type PickerRecipe } from "./add-meal";
 import { FillWeek } from "./fill-week";
 import { ScrollToToday } from "./scroll-today";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { RateRow } from "./rate-row";
+import { Removable, RemoveTrigger } from "@/components/removable";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, EmptyState } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/field";
-import { SubmitIconButton } from "@/components/ui/icon-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "This week" };
@@ -260,28 +260,16 @@ export default async function PlanPage({
         )}
 
         {rateQueue.length > 0 && (
-          <Card as="section" className="mb-4 border-info/40 bg-info-soft p-3 text-sm">
+          <Card as="section" id="rate-card" className="mb-4 border-info/40 bg-info-soft p-3 text-sm not-has-[li]:hidden">
             <h2 className="mb-2 font-semibold text-info-ink">How was dinner?</h2>
             <ul className="space-y-2">
               {rateQueue.map((m) => (
-                <li key={m.id} className="flex flex-wrap items-center gap-2">
-                  <span className="min-w-0 flex-1">
-                    <span className="text-muted">{shortDay(m.day)}: </span>
-                    {(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
-                  </span>
-                  <form action={rateMeal} className="flex items-center gap-1">
-                    <input type="hidden" name="id" value={m.id} />
-                    <SubmitIconButton label="Liked it" variant="secondary" name="rating" value="1">
-                      <ThumbsUp aria-hidden className="size-5" />
-                    </SubmitIconButton>
-                    <SubmitIconButton label="Not a fan" variant="secondary" name="rating" value="-1">
-                      <ThumbsDown aria-hidden className="size-5" />
-                    </SubmitIconButton>
-                    <SubmitButton variant="ghost" size="sm" name="rating" value="0">
-                      skip
-                    </SubmitButton>
-                  </form>
-                </li>
+                <RateRow
+                  key={m.id}
+                  id={m.id}
+                  when={shortDay(m.day)}
+                  name={(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
+                />
               ))}
             </ul>
             {rateMore > 0 && <p className="mt-2 text-xs text-muted">{rateMore} more after these.</p>}
@@ -333,8 +321,9 @@ export default async function PlanPage({
                         );
                         const needsKeto = mode === "home" && r?.diet === "family" && !hasKetoPlate;
                         const ideas = needsKeto ? ketoIdeas(m.recipe_id) : [];
+                        const mealName = r?.name ?? KIND_LABEL[m.kind] ?? "meal";
                         return (
-                          <li key={m.id}>
+                          <Removable key={m.id} id={m.id} label={mealName} action={removeMeal}>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                               <span className="w-20 text-xs text-muted uppercase">{slot}</span>
                               {off ? (
@@ -390,12 +379,7 @@ export default async function PlanPage({
                                     <SubmitButton variant="primary">Go</SubmitButton>
                                   </form>
                                 </details>
-                                <form action={removeMeal}>
-                                  <input type="hidden" name="id" value={m.id} />
-                                  <SubmitIconButton label={`Remove ${r?.name ?? KIND_LABEL[m.kind] ?? "meal"}`} variant="danger">
-                                    <X aria-hidden className="size-5" />
-                                  </SubmitIconButton>
-                                </form>
+                                <RemoveTrigger label={`Remove ${mealName}`} />
                               </span>
                             </div>
                             {ideas.length > 0 && (
@@ -414,7 +398,7 @@ export default async function PlanPage({
                                 ))}
                               </div>
                             )}
-                          </li>
+                          </Removable>
                         );
                       })
                   )}

@@ -7,25 +7,16 @@ import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
 import { formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { todayET } from "@/lib/dates";
-import { Plus, Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChipLink } from "@/components/ui/chip";
 import { Input } from "@/components/ui/field";
-import { SubmitIconButton } from "@/components/ui/icon-button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { FavoriteButton } from "./controls";
 
 export const metadata: Metadata = { title: "Recipes" };
-
-async function toggleFavorite(formData: FormData) {
-  "use server";
-  const { supabase } = await requireHousehold();
-  const id = String(formData.get("id"));
-  const next = formData.get("favorite") !== "true";
-  await supabase.from("recipes").update({ favorite: next }).eq("id", id);
-  revalidatePath("/recipes");
-}
 
 async function addStarterRecipes() {
   "use server";
@@ -228,16 +219,7 @@ export default async function RecipesPage({
                       {r.rating === -1 && <ThumbsDown aria-label="Not a fan" className="size-4 shrink-0 text-danger-ink" />}
                       {r.name}
                     </Link>
-                    <form action={toggleFavorite} className="-mr-2 -mt-2">
-                      <input type="hidden" name="id" value={r.id} />
-                      <input type="hidden" name="favorite" value={String(r.favorite)} />
-                      <SubmitIconButton
-                        label={r.favorite ? "Remove from favorites" : "Add to favorites"}
-                        pressed={r.favorite}
-                      >
-                        <Star aria-hidden className={r.favorite ? "size-5 fill-current" : "size-5"} />
-                      </SubmitIconButton>
-                    </form>
+                    <FavoriteButton id={r.id} favorite={r.favorite} className="-mr-2 -mt-2" />
                   </div>
                   <p className="mt-1 text-sm text-muted">{r.description}</p>
                   {f === "archived" && (

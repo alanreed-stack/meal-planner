@@ -1,7 +1,7 @@
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
-import { addItem, deleteItem, generateList, toggleItem } from "./actions";
+import { addItem, deleteItem, generateList } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
 import { formatAmount, formatIngredient } from "@/lib/format";
@@ -10,15 +10,15 @@ import { similarTo } from "@/lib/similar";
 import { splitOptions } from "@/lib/match";
 import { addStaple } from "../settings/actions";
 import type { Metadata } from "next";
-import { Check, ChevronLeft, ChevronRight, ExternalLink, ShoppingCart, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { Card, EmptyState, SectionHeader, cardStyles } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/field";
-import { SubmitIconButton } from "@/components/ui/icon-button";
 import { Notice } from "@/components/ui/notice";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { cn } from "@/lib/cn";
+import { Removable, RemoveTrigger } from "@/components/removable";
+import { KrogerFlash, OrderToggle } from "./controls";
 
 export const metadata: Metadata = { title: "Shopping" };
 
@@ -172,10 +172,8 @@ export default async function ShoppingPage({
 
         <Card as="section" className="mb-5 space-y-3 text-sm">
           <h2 className="font-semibold">Kroger</h2>
-          {kroger === "connected" && <Notice tone="success">Connected to your Kroger account.</Notice>}
-          {kroger === "error" && <Notice tone="error">Couldn&apos;t connect to Kroger. Please try again.</Notice>}
-          {kroger === "notconnected" && <Notice tone="warning">Connect your Kroger account first.</Notice>}
-          {(kroger === "expired" || connExpired) && (
+          <KrogerFlash status={kroger} n={n} week={monday} />
+          {connExpired && kroger !== "expired" && (
             <Notice
               tone="warning"
               action={
@@ -184,26 +182,7 @@ export default async function ShoppingPage({
                 </ButtonAnchor>
               }
             >
-              Your Kroger connection expired, so nothing was sent. Nothing is lost.
-            </Notice>
-          )}
-          {kroger === "nothing" && <Notice tone="warning">Nothing new to send. Match some items first.</Notice>}
-          {kroger === "cartfail" && (
-            <Notice tone="error">
-              Kroger didn&apos;t accept the cart, and nothing was marked as sent. Your login is fine. Try again in
-              a minute, and check any rows marked &ldquo;low confidence&rdquo; or &ldquo;check quantity&rdquo;.
-            </Notice>
-          )}
-          {kroger === "sent" && (
-            <Notice
-              tone="success"
-              action={
-                <ButtonAnchor href="https://www.kroger.com/cart" target="_blank" rel="noreferrer" size="sm">
-                  Open my Kroger cart <ExternalLink aria-hidden className="size-4" />
-                </ButtonAnchor>
-              }
-            >
-              Sent {n} item{n === "1" ? "" : "s"} to your Kroger cart. Review and check out there.
+              Your Kroger connection expired. Reconnect before you send your list.
             </Notice>
           )}
 
@@ -280,7 +259,7 @@ export default async function ShoppingPage({
         </Card>
 
         {groups.map((g) => (
-          <section key={g.category} className="mb-5">
+          <section key={g.category} className="mb-5 not-has-[li]:hidden">
             <SectionHeader className="mb-1">{g.category}</SectionHeader>
             <Card as="ul" padded={false} className="divide-y divide-border">
               {g.rows.map((i) => {
@@ -293,29 +272,19 @@ export default async function ShoppingPage({
                 const isStaple = staples.has(i.name.trim().toLowerCase());
                 const needText = qty != null ? `Need ${formatAmount(qty, i.unit)}` : "";
                 return (
-                  <li key={i.id} className="px-3 py-1 text-sm">
+                  <Removable
+                    key={i.id}
+                    id={i.id}
+                    label={i.name}
+                    action={deleteItem}
+                    className="px-3 py-1 text-sm"
+                  >
                     <div className="flex items-center gap-1">
-                      <form action={toggleItem}>
-                        <input type="hidden" name="id" value={i.id} />
-                        <input type="hidden" name="to_order" value={String(i.to_order)} />
-                        <SubmitIconButton
-                          label={i.to_order ? "Don't order" : "Order"}
-                          variant="secondary"
-                          pressed={i.to_order}
-                        >
-                          {i.to_order ? <Check aria-hidden className="size-5" /> : null}
-                        </SubmitIconButton>
-                      </form>
-                      <span className={cn("ml-2 tabular-nums", !i.to_order && "text-muted line-through")}>
-                        {formatIngredient(qty, i.unit, i.name)}
-                      </span>
+                      <OrderToggle id={i.id} checked={i.to_order} text={formatIngredient(qty, i.unit, i.name)} />
                       {i.manual && <Badge className="ml-1">added</Badge>}
-                      <form action={deleteItem} className="ml-auto">
-                        <input type="hidden" name="id" value={i.id} />
-                        <SubmitIconButton label={`Delete ${i.name}`} variant="danger">
-                          <X aria-hidden className="size-5" />
-                        </SubmitIconButton>
-                      </form>
+                      <span className="ml-auto">
+                        <RemoveTrigger label={`Delete ${i.name}`} />
+                      </span>
                     </div>
                     {similar && <p className="ml-12 text-xs text-muted">similar to {similar}</p>}
                     <details className="ml-12 text-xs text-muted">
@@ -391,7 +360,7 @@ export default async function ShoppingPage({
                         )}
                       </div>
                     )}
-                  </li>
+                  </Removable>
                 );
               })}
             </Card>

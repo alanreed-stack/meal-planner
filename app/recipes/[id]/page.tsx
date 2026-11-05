@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { BackLink } from "@/components/ui/back-link";
@@ -9,14 +8,14 @@ import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 import { addDays, dayLabel, mondayOf, todayET } from "@/lib/dates";
 import { addMeal } from "@/app/plan/actions";
-import { Pencil, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/field";
-import { SubmitIconButton } from "@/components/ui/icon-button";
 import { Notice } from "@/components/ui/notice";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { FavoriteButton, RatingButtons } from "../controls";
 
 export async function generateMetadata({
   params,
@@ -27,18 +26,6 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data } = await supabase.from("recipes").select("name").eq("id", id).maybeSingle();
   return { title: data?.name ?? "Recipe" };
-}
-
-/** 1 = liked, -1 = not a fan, 0 = clear. Thumbs-down recipes are suggested less. */
-async function rateRecipe(formData: FormData) {
-  "use server";
-  const { supabase } = await requireHousehold();
-  const n = Number(formData.get("rating"));
-  const rating = n === 1 || n === -1 ? n : null;
-  const id = String(formData.get("id"));
-  await supabase.from("recipes").update({ rating }).eq("id", id);
-  revalidatePath(`/recipes/${id}`);
-  revalidatePath("/recipes");
 }
 
 async function archiveRecipe(formData: FormData) {
@@ -111,28 +98,10 @@ export default async function RecipePage({
           <ButtonLink href={`/recipes/${r.id}/edit`}>
             <Pencil aria-hidden className="size-4" /> Edit
           </ButtonLink>
-          <form action={rateRecipe} className="ml-auto flex items-center gap-1">
-            <input type="hidden" name="id" value={r.id} />
-            <SubmitIconButton
-              label="Liked it"
-              variant="secondary"
-              name="rating"
-              value={r.rating === 1 ? "0" : "1"}
-              pressed={r.rating === 1}
-            >
-              <ThumbsUp aria-hidden className="size-5" />
-            </SubmitIconButton>
-            <SubmitIconButton
-              label="Not a fan"
-              variant="secondary"
-              name="rating"
-              value={r.rating === -1 ? "0" : "-1"}
-              pressed={r.rating === -1}
-              pressedTone="danger"
-            >
-              <ThumbsDown aria-hidden className="size-5" />
-            </SubmitIconButton>
-          </form>
+          <div className="ml-auto flex items-center gap-1">
+            <FavoriteButton id={r.id} favorite={r.favorite} />
+            <RatingButtons id={r.id} rating={r.rating} />
+          </div>
         </div>
 
         {!r.archived && (

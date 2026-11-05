@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
+import { FormBusy } from "@/components/ui/form-busy";
 import { IconButton } from "@/components/ui/icon-button";
 import { RowButton } from "@/components/ui/row-button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -82,6 +83,7 @@ export function AddMeal({
       }}
       className="mt-3 rounded-md border border-border bg-surface-muted p-3 text-sm"
     >
+      <FormBusy label="Adding…">
       <input type="hidden" name="week" value={week} />
       <input type="hidden" name="day" value={day} />
       <div className="mb-2 flex items-center gap-2">
@@ -158,6 +160,7 @@ export function AddMeal({
         ))}
         {shown.length === 0 && <li className="px-2 py-3 text-muted">No recipes match.</li>}
       </ul>
+      </FormBusy>
     </form>
   );
 }
