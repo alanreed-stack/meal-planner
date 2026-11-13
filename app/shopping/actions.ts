@@ -6,6 +6,7 @@ import { niceQty, scaleFactor } from "@/lib/scale";
 import { packagesNeeded } from "@/lib/packaging";
 import { guessAisle } from "@/lib/ingredients";
 import { splitOptions } from "@/lib/match";
+import { carryOver } from "@/lib/cart-carry";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
  *  Items you added by hand are kept. Merges the same ingredient+unit across recipes. */
@@ -33,15 +34,16 @@ export async function generateList(formData: FormData) {
     .single();
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
 
-  // Keep the checkbox choices for items that survive regeneration.
+  // Keep the checkbox choices, and what is already in the Kroger cart, for items that survive regeneration.
   const { data: old } = await supabase
     .from("shopping_items")
-    .select("name, unit, to_order")
+    .select("name, unit, to_order, picked, kroger_upc, sent_at, sent_qty, order_qty")
     .eq("week_id", week.id)
     .eq("manual", false);
   const key = (name: string, unit: string | null) =>
     `${name.trim().toLowerCase()}|${(unit ?? "").trim().toLowerCase()}`;
   const wasOff = new Set((old ?? []).filter((o) => !o.to_order).map((o) => key(o.name, o.unit)));
+  const oldBy = new Map((old ?? []).map((o) => [key(o.name, o.unit), o]));
 
   // Things the household always has: left unchecked so they don't get ordered every week.
   const { data: staples } = await supabase
@@ -115,9 +117,13 @@ export async function generateList(formData: FormData) {
           ? (m.qty_override ??
             packagesNeeded({ qty, unit: v.unit, name: v.name }, m.size).packs)
           : 1;
+        // Same product as before: carry over what was sent and picked up. Needing more than was sent
+        // clears "in cart", and the next send adds only the difference.
+        const carry = carryOver(oldBy.get(k), m?.upc ?? null, packs);
         return {
           household_id: householdId,
           week_id: week.id,
+          ...carry,
           name: v.name,
           unit: v.unit,
           qty,

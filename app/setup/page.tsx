@@ -21,7 +21,7 @@ async function create(formData: FormData) {
   });
   if (error) redirect(`/setup?error=${encodeURIComponent(error.message)}`);
   await seedStarterRecipes(supabase, hid as string, user.id);
-  redirect("/recipes");
+  redirect("/");
 }
 
 async function join(formData: FormData) {
@@ -33,7 +33,7 @@ async function join(formData: FormData) {
     p_keto: formData.get("keto") === "on",
   });
   if (error) redirect(`/setup?error=${encodeURIComponent(error.message)}`);
-  redirect("/recipes");
+  redirect("/");
 }
 
 export const metadata = { title: "Set up your household" };

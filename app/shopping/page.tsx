@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { CATEGORIES } from "@/lib/categories";
 import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { addItem, deleteItem, generateList } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
@@ -25,21 +26,20 @@ import { KrogerFlash, OrderToggle } from "./controls";
 
 export const metadata: Metadata = { title: "Shopping" };
 
-const CATEGORIES = ["produce", "meat", "dairy", "bakery", "frozen", "pantry", "other"];
 
 export default async function ShoppingPage({
   searchParams,
 }: {
   searchParams: Promise<{ w?: string; kroger?: string; n?: string; zip?: string }>;
 }) {
-  const { w, kroger, n, zip = "30307" } = await searchParams;
+  const { w, kroger, n, zip: zipParam } = await searchParams;
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
   const { supabase, householdId } = await requireHousehold();
 
   const [{ data: hh }, { data: conn }] = await Promise.all([
     supabase
       .from("households")
-      .select("kroger_location_id, kroger_store_name")
+      .select("kroger_location_id, kroger_store_name, zip")
       .eq("id", householdId)
       .single(),
     supabase.from("kroger_connections").select("user_id, expires_at, refresh_token").maybeSingle(),
@@ -48,9 +48,11 @@ export default async function ShoppingPage({
   const connExpired =
     !!conn && isPast(conn.expires_at) && !conn.refresh_token;
   const hasStore = !!hh?.kroger_location_id;
+  // The box starts with the ZIP you used last time, and stays empty until you have used one.
+  const zip = (zipParam ?? hh?.zip ?? "").trim();
   let stores: Store[] = [];
   let storeError = false;
-  if (!hasStore) {
+  if (!hasStore && /^\d{5}$/.test(zip)) {
     try {
       stores = await searchStores(zip);
     } catch {
@@ -69,7 +71,7 @@ export default async function ShoppingPage({
     ? await Promise.all([
         supabase
           .from("shopping_items")
-          .select("id, name, qty, unit, category, to_order, manual, kroger_upc, kroger_description, kroger_price, kroger_size, match_confidence, order_qty, order_qty_manual, sent_at")
+          .select("id, name, qty, unit, category, to_order, manual, kroger_upc, kroger_description, kroger_price, kroger_size, match_confidence, order_qty, order_qty_manual, sent_at, sent_qty")
           .eq("week_id", week.id)
           .order("name"),
         supabase
@@ -157,6 +159,11 @@ export default async function ShoppingPage({
           <IconLink href={`/shopping?w=${addDays(monday, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
           </IconLink>
+          {monday !== mondayOf(todayET()) && (
+            <ButtonLink href="/shopping" variant="ghost">
+              This week
+            </ButtonLink>
+          )}
         </div>
 
         <KrogerFlash status={kroger} n={n} week={monday} />
@@ -239,9 +246,10 @@ export default async function ShoppingPage({
                   <Removable
                     key={i.id}
                     id={i.id}
+                    htmlId={`item-${i.id}`}
                     label={i.name}
                     action={deleteItem}
-                    className="px-3 py-1 text-sm"
+                    className="scroll-mt-24 px-3 py-1 text-sm"
                   >
                     {/* Line 1: tick box, the item, a tag if you added it, and the ⋯ menu. */}
                     <div className="flex items-center gap-1">
@@ -332,6 +340,9 @@ export default async function ShoppingPage({
                           <Badge tone="warning">check quantity</Badge>
                         )}
                         {i.sent_at && <Badge tone="success">in cart</Badge>}
+                        {!i.sent_at && i.sent_qty > 0 && (
+                          <Badge tone="warning">{i.sent_qty} in cart, more needed</Badge>
+                        )}
                       </div>
                     )}
                   </Removable>
@@ -397,7 +408,7 @@ export default async function ShoppingPage({
         </form>
 
         {/* 3. Kroger: a short status card. The list above is what you came for. */}
-        <Card as="section" className="space-y-3 text-sm">
+        <Card as="section" id="kroger" className="scroll-mt-4 space-y-3 text-sm">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold">Kroger</h2>
             <Badge tone={conn ? "success" : "neutral"}>{conn ? "connected" : "not connected"}</Badge>
@@ -425,10 +436,15 @@ export default async function ShoppingPage({
               <form className="mb-2 flex items-center gap-2">
                 <input type="hidden" name="w" value={monday} />
                 <label htmlFor="zip">Stores near</label>
-                <Input id="zip" name="zip" defaultValue={zip} className="w-28" />
+                <Input id="zip" name="zip" defaultValue={zip} inputMode="numeric" maxLength={5} placeholder="ZIP" className="w-28" />
                 <Button type="submit">Search</Button>
               </form>
               {storeError && <Notice tone="error">Store lookup failed. Try again.</Notice>}
+              {!storeError && stores.length === 0 && (
+                <p className="mb-2 text-xs text-muted">
+                  {zip ? "No stores found for that ZIP code." : "Enter your 5-digit ZIP code to find stores."}
+                </p>
+              )}
               <ul className="divide-y divide-border rounded-md border border-border">
                 {stores.map((s) => (
                   <li key={s.id} className="flex items-center gap-2 px-2 py-2">
@@ -438,6 +454,7 @@ export default async function ShoppingPage({
                     </span>
                     <form action={setStore}>
                       <input type="hidden" name="id" value={s.id} />
+                      <input type="hidden" name="zip" value={zip} />
                       <input type="hidden" name="name" value={`${s.name} (${s.address})`} />
                       <SubmitButton variant="primary">Use this store</SubmitButton>
                     </form>

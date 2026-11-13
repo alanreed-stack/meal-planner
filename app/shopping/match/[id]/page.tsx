@@ -26,10 +26,12 @@ export default async function MatchPage({
 
   const { data: item } = await supabase
     .from("shopping_items")
-    .select("id, name")
+    .select("id, name, weeks(week_start)")
     .eq("id", id)
     .maybeSingle();
   if (!item) notFound();
+  const weekStart = (item.weeks as unknown as { week_start: string } | null)?.week_start;
+  const back = `/shopping${weekStart ? `?w=${weekStart}` : ""}#item-${item.id}`;
   const { data: h } = await supabase
     .from("households")
     .select("kroger_location_id")
@@ -51,7 +53,7 @@ export default async function MatchPage({
     <>
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
-        <BackLink href="/shopping">Back to list</BackLink>
+        <BackLink href={back}>Back to list</BackLink>
         <h1 className="mt-2 text-xl font-bold">Pick a Kroger product for: {item.name}</h1>
         <form className="my-4 flex gap-2">
           <Input name="q" defaultValue={term} aria-label="Search Kroger products" className="min-w-0 flex-1" />

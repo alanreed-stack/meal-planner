@@ -1,3 +1,4 @@
+import { CATEGORIES } from "@/lib/categories";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
@@ -10,7 +11,6 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "In-store list" };
 
-const CATEGORIES = ["produce", "meat", "dairy", "bakery", "frozen", "pantry", "other"];
 
 export default async function StorePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
   const { w } = await searchParams;

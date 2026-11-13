@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { KIND_LABEL } from "@/lib/meal-kinds";
 import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
@@ -17,8 +18,9 @@ import { IconLink } from "@/components/ui/icon-link";
 import { Menu } from "@/components/ui/menu";
 import { Segmented } from "@/components/ui/segmented";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { addMeal, copyLastWeek, moveMeal, removeMeal, setMealProtein, setMode } from "./actions";
+import { addMeal, moveMeal, removeMeal, setMealProtein, setMode } from "./actions";
 import { AddMeal, type PickerRecipe } from "./add-meal";
+import { CopyLastWeek } from "./copy-last-week";
 import { DayPills } from "./day-pills";
 import { FillWeek } from "./fill-week";
 import { RateRow } from "./rate-row";
@@ -26,11 +28,6 @@ import { ScrollToToday } from "./scroll-today";
 
 export const metadata: Metadata = { title: "This week" };
 
-const KIND_LABEL: Record<string, string> = {
-  leftovers: "Leftovers",
-  out: "Eating out",
-  quick: "Sports night (quick)",
-};
 
 const shortDay = (iso: string) =>
   new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", {
@@ -43,9 +40,9 @@ const shortDay = (iso: string) =>
 export default async function PlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ w?: string }>;
+  searchParams: Promise<{ w?: string; add?: string }>;
 }) {
-  const { w } = await searchParams;
+  const { w, add } = await searchParams;
   const today = todayET();
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : today);
   const { supabase, householdId } = await requireHousehold();
@@ -208,10 +205,7 @@ export default async function PlanPage({
             </ButtonLink>
           )}
           <span className="flex-1" />
-          <form action={copyLastWeek}>
-            <input type="hidden" name="week" value={monday} />
-            <SubmitButton variant="ghost">Copy last week</SubmitButton>
-          </form>
+          <CopyLastWeek week={monday} />
         </div>
 
         <form action={setMode} className="mb-2">
@@ -256,10 +250,7 @@ export default async function PlanPage({
             title="A fresh week"
             className="mb-4"
             action={
-              <form action={copyLastWeek}>
-                <input type="hidden" name="week" value={monday} />
-                <SubmitButton>Copy last week</SubmitButton>
-              </form>
+              <CopyLastWeek week={monday} variant="secondary" />
             }
           >
             Nothing is planned yet. Let us suggest dinners with the button below, copy last week, or add meals
@@ -415,7 +406,14 @@ export default async function PlanPage({
                   })}
                   {dayMeals.length === 0 && <li className="text-muted">Nothing planned</li>}
                 </ul>
-                <AddMeal week={monday} day={day} dayName={dayLabel(day)} mode={mode} recipes={pickerRecipes} />
+                <AddMeal
+                  week={monday}
+                  day={day}
+                  dayName={dayLabel(day)}
+                  mode={mode}
+                  recipes={pickerRecipes}
+                  defaultOpen={add === day}
+                />
               </Card>
             );
           })}

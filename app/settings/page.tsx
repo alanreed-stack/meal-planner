@@ -152,7 +152,7 @@ export default async function SettingsPage() {
           </p>
           <div className="flex flex-wrap gap-2">
             <ButtonAnchor href={`/api/kroger/connect?w=${monday}`}>{conn ? "Reconnect Kroger" : "Connect Kroger"}</ButtonAnchor>
-            <ButtonLink href="/shopping/store">{hh?.kroger_location_id ? "Change store" : "Choose a store"}</ButtonLink>
+            <ButtonLink href="/shopping#kroger">{hh?.kroger_location_id ? "Change store" : "Choose a store"}</ButtonLink>
           </div>
         </Card>
 

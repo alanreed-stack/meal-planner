@@ -195,7 +195,7 @@ export default async function RecipePage({
           </h2>
           {!hasStore ? (
             <p className="text-sm text-muted">
-              <Link href="/shopping/store" className="underline">
+              <Link href="/shopping#kroger" className="underline">
                 Pick a Kroger store
               </Link>{" "}
               to see prices.

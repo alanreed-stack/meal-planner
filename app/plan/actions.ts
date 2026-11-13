@@ -122,8 +122,8 @@ export async function removeMeal(formData: FormData) {
   revalidatePath("/plan");
 }
 
-/** Copies last week's meals (shifted +7 days) into this week. */
-export async function copyLastWeek(formData: FormData) {
+/** Copies last week's meals (shifted +7 days) into the empty slots of this week. */
+export async function copyLastWeek(formData: FormData): Promise<{ copied: number; lastWeekEmpty: boolean }> {
   const weekStart = String(formData.get("week"));
   const { supabase, householdId, week } = await ensureWeek(weekStart);
   const { data: prev } = await supabase
@@ -132,14 +132,21 @@ export async function copyLastWeek(formData: FormData) {
     .eq("household_id", householdId)
     .eq("week_start", addDays(weekStart, -7))
     .maybeSingle();
-  if (!prev) return;
+  if (!prev) return { copied: 0, lastWeekEmpty: true };
   const { data: meals } = await supabase
     .from("planned_meals")
     .select("day, slot, kind, recipe_id, protein_lbs")
     .eq("week_id", prev.id);
-  if (!meals?.length) return;
+  if (!meals?.length) return { copied: 0, lastWeekEmpty: true };
+
+  // A day and meal that already has something stays as it is.
+  const { data: taken } = await supabase.from("planned_meals").select("day, slot").eq("week_id", week.id);
+  const used = new Set((taken ?? []).map((t) => `${t.day}|${t.slot}`));
+  const toCopy = meals.filter((m) => !used.has(`${addDays(m.day, 7)}|${m.slot}`));
+  if (!toCopy.length) return { copied: 0, lastWeekEmpty: false };
+
   await supabase.from("planned_meals").insert(
-    meals.map((m) => ({
+    toCopy.map((m) => ({
       household_id: householdId,
       week_id: week.id,
       day: addDays(m.day, 7),
@@ -149,8 +156,10 @@ export async function copyLastWeek(formData: FormData) {
       protein_lbs: m.protein_lbs,
     }))
   );
-  await supabase.from("weeks").update({ mode: prev.mode }).eq("id", week.id);
+  // Only take over last week's home/travel setting when this week had nothing planned yet.
+  if (!taken?.length) await supabase.from("weeks").update({ mode: prev.mode }).eq("id", week.id);
   revalidatePath("/plan");
+  return { copied: toCopy.length, lastWeekEmpty: false };
 }
 
 /** Sets the meat weight for one planned meal. Blank means "use the household usual". */

@@ -15,6 +15,7 @@ const RemoveContext = createContext<(() => void) | null>(null);
 export function Removable({
   as: Tag = "li",
   id,
+  htmlId,
   label,
   action,
   className,
@@ -22,6 +23,8 @@ export function Removable({
 }: {
   as?: ElementType;
   id: string;
+  /** Optional element id, so a link can scroll to this row. */
+  htmlId?: string;
   /** What to call it in the toast, e.g. "Taco Night". */
   label: string;
   /** A server action that takes FormData with an `id` field. */
@@ -54,7 +57,9 @@ export function Removable({
   if (removed) return null;
   return (
     <RemoveContext.Provider value={remove}>
-      <Tag className={className}>{children}</Tag>
+      <Tag id={htmlId} className={className}>
+        {children}
+      </Tag>
     </RemoveContext.Provider>
   );
 }

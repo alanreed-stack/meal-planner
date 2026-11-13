@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { KIND_LABEL } from "@/lib/meal-kinds";
 import { addDays, hourET, mondayOf, todayET } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
@@ -9,11 +10,6 @@ import { CalendarPlus, ChefHat, ChevronRight, Clock, ShoppingCart } from "lucide
 import { RecipeTile } from "@/app/recipes/recipe-tile";
 import { mainProtein } from "@/lib/protein";
 
-const KIND_LABEL: Record<string, string> = {
-  leftovers: "Leftovers",
-  out: "Eating out",
-  quick: "Sports night (quick)",
-};
 
 type Meal = {
   id: string;
@@ -85,7 +81,7 @@ export default async function Home() {
           {tonight.length === 0 && (
             <div className="px-4 pt-2 pb-4">
               <p className="text-lg">Nothing planned for dinner yet.</p>
-              <ButtonLink href="/plan" variant="primary" className="mt-3">
+              <ButtonLink href={`/plan?add=${today}`} variant="primary" className="mt-3">
                 <CalendarPlus aria-hidden className="size-4" /> Plan tonight
               </ButtonLink>
             </div>

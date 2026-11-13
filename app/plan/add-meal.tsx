@@ -41,14 +41,17 @@ export function AddMeal({
   dayName,
   mode,
   recipes,
+  defaultOpen = false,
 }: {
   week: string;
   day: string;
   dayName: string;
   mode: "home" | "travel";
   recipes: PickerRecipe[];
+  /** Open as soon as the page loads (the "Plan tonight" link on Home). */
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <>
       <Button className="mt-3" onClick={() => setOpen(true)}>

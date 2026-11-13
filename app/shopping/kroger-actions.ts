@@ -72,11 +72,13 @@ async function storeId() {
 
 export async function setStore(formData: FormData) {
   const { supabase, householdId } = await requireHousehold();
+  const zip = String(formData.get("zip") ?? "").trim();
   await supabase
     .from("households")
     .update({
       kroger_location_id: String(formData.get("id")),
       kroger_store_name: String(formData.get("name")),
+      ...(/^\d{5}$/.test(zip) ? { zip } : {}),
     })
     .eq("id", householdId);
   revalidatePath("/shopping");
@@ -138,6 +140,7 @@ export async function matchItems(formData: FormData) {
               match_confidence: pick.confidence,
               ...(item.order_qty_manual ? {} : { order_qty: packs }),
               sent_at: null,
+              sent_qty: 0,
             })
             .eq("id", item.id);
           await remember(supabase, householdId, item.name, {
@@ -169,9 +172,10 @@ export async function chooseProduct(formData: FormData) {
 
   const { data: it } = await supabase
     .from("shopping_items")
-    .select("name, qty, unit")
+    .select("name, qty, unit, weeks(week_start)")
     .eq("id", String(formData.get("id")))
     .single();
+  const weekStart = (it?.weeks as unknown as { week_start: string } | null)?.week_start;
   if (it) {
     await remember(supabase, householdId, it.name, {
       upc,
@@ -198,10 +202,11 @@ export async function chooseProduct(formData: FormData) {
         order_qty: packs,
         order_qty_manual: false,
         sent_at: null,
+        sent_qty: 0, // a different product: nothing of it is in the cart yet
       })
       .eq("id", String(formData.get("id")));
   }
-  redirect("/shopping");
+  redirect(`/shopping${weekStart ? `?w=${weekStart}` : ""}#item-${String(formData.get("id"))}`);
 }
 
 /** Sets the number of packages by hand. Leave the box empty to go back to automatic. */
@@ -292,18 +297,27 @@ export async function sendToCart(formData: FormData) {
 
   const { data: items } = await supabase
     .from("shopping_items")
-    .select("id, kroger_upc, order_qty")
+    .select("id, kroger_upc, order_qty, sent_qty")
     .eq("week_id", week.id)
     .eq("to_order", true)
     .not("kroger_upc", "is", null)
     .is("sent_at", null);
-  if (!items?.length) redirect(back("nothing"));
+  // Only add what the cart does not have yet. Something already in the cart in full needs nothing more.
+  const covered = (items ?? []).filter((i) => i.order_qty - i.sent_qty <= 0);
+  if (covered.length) {
+    await supabase
+      .from("shopping_items")
+      .update({ sent_at: new Date().toISOString() })
+      .in("id", covered.map((i) => i.id));
+  }
+  const toAdd = (items ?? []).filter((i) => i.order_qty - i.sent_qty > 0);
+  if (!toAdd.length) redirect(back("nothing"));
 
   let failure: "expired" | "cartfail" | null = null;
   try {
     await addToCart(
       token,
-      items.map((i) => ({ upc: i.kroger_upc as string, quantity: i.order_qty }))
+      toAdd.map((i) => ({ upc: i.kroger_upc as string, quantity: i.order_qty - i.sent_qty }))
     );
   } catch (e) {
     // 401/403 means Kroger no longer accepts our login. Anything else is a problem with the request.
@@ -312,9 +326,9 @@ export async function sendToCart(formData: FormData) {
   // Nothing is marked as sent unless Kroger accepted the cart, so you can simply try again.
   if (failure) redirect(back(failure));
 
-  await supabase
-    .from("shopping_items")
-    .update({ sent_at: new Date().toISOString() })
-    .in("id", items.map((i) => i.id));
-  redirect(`${back("sent")}&n=${items.length}`);
+  const sentAt = new Date().toISOString();
+  await Promise.all(
+    toAdd.map((i) => supabase.from("shopping_items").update({ sent_at: sentAt, sent_qty: i.order_qty }).eq("id", i.id))
+  );
+  redirect(`${back("sent")}&n=${toAdd.length}`);
 }
