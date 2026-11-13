@@ -175,7 +175,7 @@ export async function chooseProduct(formData: FormData) {
     .select("name, qty, unit, weeks(week_start)")
     .eq("id", String(formData.get("id")))
     .single();
-  const weekStart = (it?.weeks as unknown as { week_start: string } | null)?.week_start;
+  const weekStart = it?.weeks?.week_start;
   if (it) {
     await remember(supabase, householdId, it.name, {
       upc,

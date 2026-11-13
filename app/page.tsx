@@ -11,21 +11,6 @@ import { RecipeTile } from "@/app/recipes/recipe-tile";
 import { mainProtein } from "@/lib/protein";
 
 
-type Meal = {
-  id: string;
-  day: string;
-  kind: string;
-  recipe_id: string | null;
-  protein_lbs: number | null;
-  recipes: {
-    name: string;
-    prep_minutes: number | null;
-    cook_minutes: number | null;
-    image_url: string | null;
-    ingredients: { name: string; qty: number | null; unit: string | null; category: string }[] | null;
-  } | null;
-};
-
 export default async function Home() {
   const { supabase, householdId, displayName } = await requireHousehold();
   const today = todayET();
@@ -55,7 +40,7 @@ export default async function Home() {
 
   const dinnerTime = String(hh?.dinner_time ?? "18:00:00");
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
-  const all = (meals ?? []) as unknown as Meal[];
+  const all = meals ?? [];
   const tonight = all.filter((m) => m.day === today);
   const later = all.filter((m) => m.day !== today);
 

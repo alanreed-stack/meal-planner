@@ -118,7 +118,7 @@ export default async function ShoppingPage({
     return (planned ?? [])
       .filter((p) => p.recipe_id && ids.has(p.recipe_id))
       .map((p) => {
-        const name = (p.recipes as unknown as { name: string } | null)?.name ?? "a recipe";
+        const name = p.recipes?.name ?? "a recipe";
         const dow = new Date(p.day + "T00:00:00Z").toLocaleDateString("en-US", {
           weekday: "short",
           timeZone: "UTC",

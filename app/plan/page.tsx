@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
+import { asDiet } from "@/lib/diet";
 import { KIND_LABEL } from "@/lib/meal-kinds";
 import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
@@ -119,7 +120,7 @@ export default async function PlanPage({
   const pickerRecipes: PickerRecipe[] = (recipes ?? []).map((r) => ({
     id: r.id,
     n: r.name,
-    d: r.diet,
+    d: asDiet(r.diet),
     f: r.favorite,
     m: minutesOf(r),
     p: proteinOf.get(r.id) ?? "none",
@@ -128,7 +129,7 @@ export default async function PlanPage({
   const cands: Cand[] = (recipes ?? []).map((r) => ({
     id: r.id,
     name: r.name,
-    diet: r.diet,
+    diet: asDiet(r.diet),
     favorite: r.favorite,
     minutes: minutesOf(r),
     protein: proteinOf.get(r.id) ?? "none",
@@ -236,7 +237,7 @@ export default async function PlanPage({
                   key={m.id}
                   id={m.id}
                   when={shortDay(m.day).split(",")[0]}
-                  name={(m.recipes as unknown as { name: string } | null)?.name ?? "(deleted recipe)"}
+                  name={m.recipes?.name ?? "(deleted recipe)"}
                   more={rateMore}
                 />
               ))}
@@ -288,13 +289,7 @@ export default async function PlanPage({
                   {ordered.map((m) => {
                     const big = m.slot === "dinner";
                     const off = m.kind !== "recipe";
-                    const r = m.recipes as unknown as {
-                      name: string;
-                      diet: string;
-                      prep_minutes: number | null;
-                      cook_minutes: number | null;
-                      tags: string[];
-                    } | null;
+                    const r = m.recipes;
                     const total = (r?.prep_minutes ?? 0) + (r?.cook_minutes ?? 0);
                     const longCook =
                       big && !!r && ((r.cook_minutes ?? 0) >= 120 || r.tags?.includes("slow-cooker"));
@@ -303,7 +298,7 @@ export default async function PlanPage({
                         o.id !== m.id &&
                         o.slot === m.slot &&
                         o.kind === "recipe" &&
-                        (o.recipes as unknown as { diet: string } | null)?.diet === "both"
+                        o.recipes?.diet === "both"
                     );
                     const needsKeto = mode === "home" && r?.diet === "family" && !hasKetoPlate;
                     const ideas = needsKeto ? ketoIdeas(m.recipe_id) : [];

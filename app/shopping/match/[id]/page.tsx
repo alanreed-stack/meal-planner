@@ -30,7 +30,7 @@ export default async function MatchPage({
     .eq("id", id)
     .maybeSingle();
   if (!item) notFound();
-  const weekStart = (item.weeks as unknown as { week_start: string } | null)?.week_start;
+  const weekStart = item.weeks?.week_start;
   const back = `/shopping${weekStart ? `?w=${weekStart}` : ""}#item-${item.id}`;
   const { data: h } = await supabase
     .from("households")

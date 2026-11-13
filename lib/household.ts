@@ -17,7 +17,7 @@ export async function requireHousehold() {
     .maybeSingle();
   if (!member) redirect("/setup");
 
-  const h = member.households as unknown as { name: string; invite_code: string } | null;
+  const h = member.households;
   return {
     supabase,
     user,

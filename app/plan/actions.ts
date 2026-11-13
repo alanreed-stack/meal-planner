@@ -74,7 +74,7 @@ export async function moveMeal(formData: FormData) {
     .select("id, weeks(week_start)")
     .eq("id", String(formData.get("id")))
     .maybeSingle();
-  const monday = (meal?.weeks as unknown as { week_start: string } | null)?.week_start;
+  const monday = meal?.weeks?.week_start;
   if (!meal || !monday || !inWeek(monday, day)) return;
   await supabase.from("planned_meals").update({ day }).eq("id", meal.id);
   revalidatePath("/plan");
