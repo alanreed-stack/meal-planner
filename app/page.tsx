@@ -343,7 +343,7 @@ export default async function Home() {
                       </span>
                     </p>
                     <div className="mt-3 flex gap-2">
-                      <ButtonLink href={`/recipes/${m.recipe_id}/cook?lbs=${lbs}`} variant="primary" size="lg" className="flex-1">
+                      <ButtonLink href={`/recipes/${m.recipe_id}/cook?lbs=${lbs}&meal=${m.id}`} variant="primary" size="lg" className="flex-1">
                         <ChefHat aria-hidden className="size-5" /> Start cooking
                       </ButtonLink>
                       <ButtonLink href={`/recipes/${m.recipe_id}?lbs=${lbs}`} size="lg">

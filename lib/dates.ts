@@ -35,6 +35,9 @@ export function weekLabel(weekStart: string): string {
   return `${fmt(weekStart)} – ${fmt(addDays(weekStart, 6))}`;
 }
 
+/** The current time in milliseconds. A function of its own so components can call it from event handlers. */
+export const nowMs = () => Date.now();
+
 /** True when a timestamp (ISO string) is already behind us. */
 export function isPast(iso: string): boolean {
   return new Date(iso).getTime() < Date.now();

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
+import { todayET } from "@/lib/dates";
 import { formatIngredient } from "@/lib/format";
 import { niceQty, scaleFactor } from "@/lib/scale";
 import { CookMode } from "./cook-mode";
@@ -12,10 +13,10 @@ export default async function CookPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ lbs?: string }>;
+  searchParams: Promise<{ lbs?: string; meal?: string }>;
 }) {
   const { id } = await params;
-  const { lbs } = await searchParams;
+  const { lbs, meal } = await searchParams;
   const { supabase, householdId } = await requireHousehold();
 
   const { data: hh } = await supabase
@@ -23,11 +24,26 @@ export default async function CookPage({
     .select("default_protein_lbs")
     .eq("id", householdId)
     .single();
+  // The dinner this is for: the one Home linked to, or else tonight's planned dinner of this recipe.
+  const today = todayET();
+  const planned = meal
+    ? (await supabase.from("planned_meals").select("id, protein_lbs").eq("id", meal).eq("recipe_id", id).maybeSingle()).data
+    : (
+        await supabase
+          .from("planned_meals")
+          .select("id, protein_lbs")
+          .eq("recipe_id", id)
+          .eq("day", today)
+          .eq("slot", "dinner")
+          .limit(1)
+          .maybeSingle()
+      ).data;
+
   const asked = Number(lbs);
   const target =
     lbs && Number.isFinite(asked) && asked > 0
       ? Math.min(10, Math.max(0.5, asked))
-      : Number(hh?.default_protein_lbs ?? 2);
+      : Number(planned?.protein_lbs ?? hh?.default_protein_lbs ?? 2);
 
   const { data: r } = await supabase.from("recipes").select("*").eq("id", id).maybeSingle();
   if (!r) notFound();
@@ -42,6 +58,9 @@ export default async function CookPage({
 
   return (
     <CookMode
+      recipeId={id}
+      mealId={planned?.id ?? null}
+      today={today}
       name={r.name}
       backHref={`/recipes/${id}`}
       ketoNote={r.keto_swap ?? ""}
