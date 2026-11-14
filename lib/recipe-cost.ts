@@ -74,3 +74,13 @@ export function estimateCost(
 }
 
 export const money = (n: number) => `$${n.toFixed(2)}`;
+
+/**
+ * The cost to rank a recipe by, or null when too few of its ingredients have a price for the number to mean anything
+ * (a recipe with no prices would otherwise look like the cheapest one).
+ */
+export function costIfKnown(c: RecipeCost): number | null {
+  const priced = c.lines.length;
+  if (priced === 0) return null;
+  return priced / (priced + c.missing.length) >= 0.7 ? c.total : null;
+}

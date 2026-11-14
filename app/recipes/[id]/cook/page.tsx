@@ -64,6 +64,7 @@ export default async function CookPage({
       name={r.name}
       backHref={`/recipes/${id}`}
       ketoNote={r.keto_swap ?? ""}
+      notes={r.notes ?? ""}
       ingredients={list.map((i) => ({
         text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name),
         familyOnly: i.family_only,

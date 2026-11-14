@@ -7,6 +7,7 @@ import { Chip } from "@/components/ui/chip";
 import { Field, Select } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { Sheet } from "@/components/ui/sheet";
+import { useSearch } from "./search";
 
 export type FilterState = {
   q: string;
@@ -26,6 +27,7 @@ const PROTEINS = ["chicken", "beef", "pork", "turkey", "shrimp", "fish"];
  */
 export function FiltersSheet({ state, count }: { state: FilterState; count: number }) {
   const [open, setOpen] = useState(false);
+  const { q } = useSearch();
   return (
     <>
       <Chip className="shrink-0" on={count > 0} onClick={() => setOpen(true)} aria-haspopup="dialog">
@@ -35,7 +37,7 @@ export function FiltersSheet({ state, count }: { state: FilterState; count: numb
       <Sheet open={open} onClose={() => setOpen(false)} title="Filter recipes">
         <form action="/recipes" method="get" className="flex max-h-[inherit] flex-col">
           {/* Keep the search and the quick chips you already picked. */}
-          <input type="hidden" name="q" value={state.q} />
+          <input type="hidden" name="q" value={q} />
           {state.fav && <input type="hidden" name="fav" value="1" />}
           {state.quick && <input type="hidden" name="quick" value="1" />}
 
@@ -70,6 +72,8 @@ export function FiltersSheet({ state, count }: { state: FilterState; count: numb
                 <option value="name">Name</option>
                 <option value="time">Cook time</option>
                 <option value="recent">Least recently made</option>
+                <option value="rating">Highest rated</option>
+                <option value="cheapest">Cheapest</option>
               </Select>
             </Field>
             <label className="flex min-h-11 items-center gap-3">
@@ -79,7 +83,7 @@ export function FiltersSheet({ state, count }: { state: FilterState; count: numb
           </div>
 
           <div className="flex gap-2 border-t border-border p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            <ButtonLink href={state.q ? `/recipes?q=${encodeURIComponent(state.q)}` : "/recipes"} className="flex-1">
+            <ButtonLink href={q.trim() ? `/recipes?q=${encodeURIComponent(q)}` : "/recipes"} className="flex-1">
               Clear all
             </ButtonLink>
             <Button type="submit" variant="primary" className="flex-1">

@@ -6,17 +6,19 @@ import { Nav } from "@/components/nav";
 import { missingStarterCount, seedStarterRecipes } from "@/lib/seed-recipes";
 import { formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
+import { searchText } from "@/lib/recipe-search";
+import { costIfKnown, estimateCost, money, type SavedMatch } from "@/lib/recipe-cost";
+import { scaleFactor } from "@/lib/scale";
 import { todayET } from "@/lib/dates";
 import { Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChipLink } from "@/components/ui/chip";
-import { Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FavoriteButton } from "./controls";
 import { FiltersSheet, type FilterState } from "./filters";
 import { RecipeTile } from "./recipe-tile";
+import { ResultList, SearchBox, SearchChipLink, SearchProvider, type SearchItem } from "./search";
 
 export const metadata: Metadata = { title: "Recipes" };
 
@@ -77,14 +79,14 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
       .select(
         "id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite, archived, rating, image_url"
       ),
-    supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category"),
+    supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category, family_only"),
     supabase.from("planned_meals").select("recipe_id, day").not("recipe_id", "is", null).lte("day", today),
   ]);
 
-  const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string }[]>();
+  const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string; family_only: boolean }[]>();
   for (const i of ings ?? []) {
     const list = ingsBy.get(i.recipe_id) ?? [];
-    list.push({ name: i.name, qty: i.qty == null ? null : Number(i.qty), unit: i.unit, category: i.category });
+    list.push({ name: i.name, qty: i.qty == null ? null : Number(i.qty), unit: i.unit, category: i.category, family_only: i.family_only });
     ingsBy.set(i.recipe_id, list);
   }
   const lastMade = new Map<string, string>();
@@ -99,15 +101,45 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const protein = (id: string) => mainProtein(ingsBy.get(id) ?? []);
   const term = q.trim().toLowerCase();
 
+  // "Cheapest" ranks by the saved Kroger prices. A recipe with too few priced ingredients has no honest number, so it goes last.
+  const costOf = new Map<string, number | null>();
+  if (s === "cheapest") {
+    const [{ data: saved }, { data: stapleRows }, { data: hh }] = await Promise.all([
+      supabase.from("kroger_matches").select("name_key, price, size, description").eq("household_id", householdId),
+      supabase.from("pantry_staples").select("name_key").eq("household_id", householdId),
+      supabase.from("households").select("default_protein_lbs").eq("id", householdId).single(),
+    ]);
+    const matches = new Map<string, SavedMatch>(
+      (saved ?? []).map((m) => [m.name_key, { price: m.price == null ? null : Number(m.price), size: m.size, description: m.description }])
+    );
+    const staples = new Set((stapleRows ?? []).map((x) => x.name_key));
+    const lbs = Number(hh?.default_protein_lbs ?? 2);
+    for (const r of all ?? []) {
+      const list = ingsBy.get(r.id) ?? [];
+      costOf.set(r.id, costIfKnown(estimateCost(list, scaleFactor(list, lbs), 1, matches, staples)));
+    }
+  }
+
   const recipes = (all ?? [])
     .filter((r) => r.archived === removed)
     .filter((r) => !fav || r.favorite)
     .filter((r) => !quick || r.tags?.includes("quick") || total(r) <= 30)
     .filter((r) => !diet || r.diet === diet)
     .filter((r) => !p || protein(r.id) === p)
-    .filter((r) => !term || r.name.toLowerCase().includes(term))
     .sort((a, b) => {
       if (s === "time") return total(a) - total(b) || a.name.localeCompare(b.name);
+      if (s === "rating") {
+        // Liked first, then not yet rated, then not-a-fan; favorites win a tie.
+        return (b.rating ?? 0) - (a.rating ?? 0) || Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name);
+      }
+      if (s === "cheapest") {
+        const ca = costOf.get(a.id) ?? null;
+        const cb = costOf.get(b.id) ?? null;
+        if (ca != null && cb != null) return ca - cb || a.name.localeCompare(b.name);
+        if (ca != null) return -1;
+        if (cb != null) return 1;
+        return a.name.localeCompare(b.name);
+      }
       if (s === "recent") {
         // Never made first, then the longest ago.
         const la = lastMade.get(a.id) ?? "";
@@ -143,69 +175,11 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
     return `Made ${wk} week${wk === 1 ? "" : "s"} ago`;
   };
 
-  return (
-    <>
-      <Nav />
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-3 flex items-center gap-3">
-          <h1 className="flex-1 text-2xl font-bold">Recipes</h1>
-          <ButtonLink href="/recipes/new" variant="primary">
-            <Plus aria-hidden className="size-4" /> Add recipe
-          </ButtonLink>
-        </div>
-
-        <form className="mb-3">
-          {fav && <input type="hidden" name="fav" value="1" />}
-          {quick && <input type="hidden" name="quick" value="1" />}
-          {diet && <input type="hidden" name="diet" value={diet} />}
-          {p && <input type="hidden" name="p" value={p} />}
-          {s !== "name" && <input type="hidden" name="s" value={s} />}
-          {removed && <input type="hidden" name="removed" value="1" />}
-          <Input type="search" name="q" defaultValue={q} placeholder="Search recipes" aria-label="Search recipes" />
-        </form>
-
-        {/* threshold keeps the banner away if you delete a couple of starters for good */}
-        {missing >= 10 && !anyFilter && !term && (
-          <form
-            action={addStarterRecipes}
-            className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3 text-sm"
-          >
-            <span className="flex-1">
-              {missing} more starter recipes are available: Peruvian, Asian, Indian, Greek, Italian
-              and more, all with keto and family versions.
-            </span>
-            <SubmitButton variant="primary">Add them</SubmitButton>
-          </form>
-        )}
-
-        {/* One row that scrolls sideways. Everything else is behind the Filters chip. */}
-        <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
-          <FiltersSheet state={filterState} count={sheetCount} />
-          <ChipLink
-            className="shrink-0"
-            href={href({ fav: "", quick: "", diet: "", p: "", s: "name", removed: "" })}
-            on={!anyFilter}
-          >
-            All
-          </ChipLink>
-          <ChipLink className="shrink-0" href={href({ fav: fav ? "" : "1" })} on={fav}>
-            Favorites
-          </ChipLink>
-          <ChipLink className="shrink-0" href={href({ diet: diet === "both" ? "" : "both" })} on={diet === "both"}>
-            Keto + family
-          </ChipLink>
-          <ChipLink className="shrink-0" href={href({ quick: quick ? "" : "1" })} on={quick}>
-            Quick
-          </ChipLink>
-        </div>
-        <p className="mb-4 text-xs text-muted tabular-nums">
-          {recipes.length} recipe{recipes.length === 1 ? "" : "s"}
-          {removed ? " (removed)" : ""}
-        </p>
-
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {recipes.map((r) => (
-            <li key={r.id}>
+  const items: SearchItem[] = recipes.map((r) => ({
+    id: r.id,
+    text: searchText(r, (ingsBy.get(r.id) ?? []).map((i) => i.name)),
+    node: (
+            <li>
               <Card padded={false} className="relative flex h-full flex-col overflow-hidden">
                 <div className="relative">
                   {r.image_url ? (
@@ -258,27 +232,93 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                     <Badge className="tabular-nums">{formatMinutes(total(r))}</Badge>
                     <Badge>{r.difficulty}</Badge>
                     <Badge>{madeLabel(r.id)}</Badge>
+                    {s === "cheapest" && (
+                      <Badge tone={costOf.get(r.id) != null ? "info" : "neutral"} className="tabular-nums">
+                        {costOf.get(r.id) != null ? `about ${money(costOf.get(r.id)!)}` : "no price yet"}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </Card>
             </li>
-          ))}
-          {recipes.length === 0 && (
-            <li className="text-muted sm:col-span-2 lg:col-span-3">
-              {removed ? (
-                "Nothing has been removed."
-              ) : (
-                <>
-                  No recipes match.{" "}
-                  <Link href="/recipes" className="text-primary-ink underline">
-                    Clear filters
-                  </Link>
-                </>
-              )}
-            </li>
-          )}
-        </ul>
+    ),
+  }));
+
+  return (
+    <>
+      <Nav />
+      <SearchProvider initialQ={q}>
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+        <div className="mb-3 flex items-center gap-3">
+          <h1 className="flex-1 text-2xl font-bold">Recipes</h1>
+          <ButtonLink href="/recipes/new" variant="primary">
+            <Plus aria-hidden className="size-4" /> Add recipe
+          </ButtonLink>
+        </div>
+
+        <SearchBox
+          keep={{
+            ...(fav ? { fav: "1" } : {}),
+            ...(quick ? { quick: "1" } : {}),
+            ...(diet ? { diet } : {}),
+            ...(p ? { p } : {}),
+            ...(s !== "name" ? { s } : {}),
+            ...(removed ? { removed: "1" } : {}),
+          }}
+        />
+
+        {/* threshold keeps the banner away if you delete a couple of starters for good */}
+        {missing >= 10 && !anyFilter && !term && (
+          <form
+            action={addStarterRecipes}
+            className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3 text-sm"
+          >
+            <span className="flex-1">
+              {missing} more starter recipes are available: Peruvian, Asian, Indian, Greek, Italian
+              and more, all with keto and family versions.
+            </span>
+            <SubmitButton variant="primary">Add them</SubmitButton>
+          </form>
+        )}
+
+        {/* One row that scrolls sideways. Everything else is behind the Filters chip. */}
+        <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+          <FiltersSheet state={filterState} count={sheetCount} />
+          <SearchChipLink
+            className="shrink-0"
+            href={href({ fav: "", quick: "", diet: "", p: "", s: "name", removed: "" })}
+            on={!anyFilter}
+          >
+            All
+          </SearchChipLink>
+          <SearchChipLink className="shrink-0" href={href({ fav: fav ? "" : "1" })} on={fav}>
+            Favorites
+          </SearchChipLink>
+          <SearchChipLink className="shrink-0" href={href({ diet: diet === "both" ? "" : "both" })} on={diet === "both"}>
+            Keto + family
+          </SearchChipLink>
+          <SearchChipLink className="shrink-0" href={href({ quick: quick ? "" : "1" })} on={quick}>
+            Quick
+          </SearchChipLink>
+        </div>
+        <ResultList
+          items={items}
+          suffix={removed ? " (removed)" : ""}
+          empty={
+            removed ? (
+              "Nothing has been removed."
+            ) : (
+              <>
+                No recipes match.{" "}
+                <Link href="/recipes" className="text-primary-ink underline">
+                  Clear filters
+                </Link>
+              </>
+            )
+          }
+        />
       </main>
+      </SearchProvider>
     </>
   );
 }

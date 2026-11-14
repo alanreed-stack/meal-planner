@@ -7,7 +7,7 @@ import { formatIngredient, formatMinutes } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 import { addDays, dayLabel, weekStartOf, todayET } from "@/lib/dates";
-import { ChefHat, Pencil, Tag, Trash2 } from "lucide-react";
+import { ChefHat, Copy, Pencil, Tag, Trash2 } from "lucide-react";
 import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { priceRecipe } from "./price-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { mainProtein } from "@/lib/protein";
 import { FavoriteButton, RatingButtons } from "../controls";
+import { duplicateRecipe } from "../actions";
 import { RecipeTile } from "../recipe-tile";
 import { AddToWeek } from "./add-to-week";
 import { LbsControl } from "./lbs-control";
@@ -73,6 +74,15 @@ export default async function RecipePage({
     .order("sort");
 
   const today = todayET();
+  const { data: madeRows } = await supabase
+    .from("planned_meals")
+    .select("day")
+    .eq("recipe_id", id)
+    .eq("kind", "recipe")
+    .lte("day", today)
+    .order("day", { ascending: false });
+  const timesMade = (madeRows ?? []).length;
+  const lastMade = madeRows?.[0]?.day;
   const weekStart = weekStartOf(today);
   const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
   const base = proteinLbs(list);
@@ -130,6 +140,11 @@ export default async function RecipePage({
           <DietBadge diet={r.diet} />
           <Badge>{r.difficulty}</Badge>
         </div>
+        <p className="mt-2 text-sm text-muted tabular-nums">
+          {timesMade === 0
+            ? "Not made yet."
+            : `Made ${timesMade} time${timesMade === 1 ? "" : "s"}, last on ${new Date(lastMade + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}.`}
+        </p>
 
         <Card as="dl" className="mt-4 grid grid-cols-4 gap-2 text-center">
           {[
@@ -157,6 +172,12 @@ export default async function RecipePage({
           <ButtonLink href={`/recipes/${r.id}/edit`} variant="ghost">
             <Pencil aria-hidden className="size-4" /> Edit
           </ButtonLink>
+          <form action={duplicateRecipe}>
+            <input type="hidden" name="id" value={r.id} />
+            <SubmitButton variant="ghost">
+              <Copy aria-hidden className="size-4" /> Duplicate
+            </SubmitButton>
+          </form>
           <span className="flex-1" />
           <FavoriteButton id={r.id} favorite={r.favorite} />
           <RatingButtons id={r.id} rating={r.rating} />
@@ -165,6 +186,11 @@ export default async function RecipePage({
         {r.keto_swap && (
           <Notice tone="success" className="mt-4">
             <b>Keto vs. family:</b> {r.keto_swap}
+          </Notice>
+        )}
+        {r.notes && (
+          <Notice tone="info" className="mt-3">
+            <b>Family notes:</b> {r.notes}
           </Notice>
         )}
 
@@ -188,6 +214,15 @@ export default async function RecipePage({
             </li>
           ))}
         </ul>
+
+        <h2 className="mt-8 text-lg font-semibold">Steps</h2>
+        <ol className="mt-3 list-decimal space-y-3 pl-6 leading-relaxed marker:font-semibold marker:text-muted">
+          {r.steps.map((s: string, i: number) => (
+            <li key={i} className="pl-1">
+              {s}
+            </li>
+          ))}
+        </ol>
 
         <Card as="section" aria-labelledby="cost" className="mt-6 space-y-2">
           <h2 id="cost" className="text-lg font-semibold">
@@ -253,15 +288,6 @@ export default async function RecipePage({
             </>
           )}
         </Card>
-
-        <h2 className="mt-8 text-lg font-semibold">Steps</h2>
-        <ol className="mt-3 list-decimal space-y-3 pl-6 leading-relaxed marker:font-semibold marker:text-muted">
-          {r.steps.map((s: string, i: number) => (
-            <li key={i} className="pl-1">
-              {s}
-            </li>
-          ))}
-        </ol>
 
         {!r.archived && (
           <form action={archiveRecipe} className="mt-10 border-t border-border pt-4">

@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Edit recipe" };
 
 export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await requireHousehold();
+  const { supabase, householdId } = await requireHousehold();
 
   const { data: r } = await supabase.from("recipes").select("*").eq("id", id).maybeSingle();
   if (!r) notFound();
@@ -27,12 +27,14 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
         <BackLink href={`/recipes/${id}`}>Back to recipe</BackLink>
         <h1 className="mb-4 mt-2 text-2xl font-bold">Edit: {r.name}</h1>
         <NewRecipeForm
+          householdId={householdId}
           edit={{
             id: r.id,
             name: r.name,
             description: r.description ?? "",
             diet: r.diet,
             keto_swap: r.keto_swap ?? "",
+            notes: r.notes ?? "",
             prep_minutes: r.prep_minutes,
             cook_minutes: r.cook_minutes,
             servings: r.servings,

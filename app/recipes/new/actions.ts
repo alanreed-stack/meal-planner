@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { ingredientKey, parseIngredient } from "@/lib/ingredients";
 import { importRecipeFromUrl, type RecipeDraft } from "@/lib/recipe-import";
+import { parseRecipeText } from "@/lib/recipe-text";
 
 type ImportState = { draft?: RecipeDraft; error?: string; n?: number };
 
@@ -17,6 +18,19 @@ export async function importRecipe(_prev: ImportState, formData: FormData): Prom
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Couldn't import that link." };
   }
+}
+
+/** "Paste recipe text": splits a pasted block into a name, ingredients and steps for you to check. */
+export async function importText(_prev: ImportState, formData: FormData): Promise<ImportState> {
+  await requireHousehold();
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) return { error: "Paste the recipe text first." };
+  if (text.length > 20_000) return { error: "That is too long to be one recipe." };
+  const draft = parseRecipeText(text);
+  if (!draft.ingredients && !draft.steps) {
+    return { error: "Couldn't tell the ingredients from the steps. Put each ingredient on its own line, starting with the amount." };
+  }
+  return { draft, n: Date.now() };
 }
 
 const int = (v: FormDataEntryValue | null) => {
@@ -99,6 +113,7 @@ export async function saveRecipe(_prev: SaveState | undefined, formData: FormDat
     description: String(formData.get("description") ?? "").trim() || null,
     diet,
     keto_swap: String(formData.get("keto_swap") ?? "").trim() || null,
+    notes: String(formData.get("notes") ?? "").trim().slice(0, 1000) || null,
     prep_minutes: int(formData.get("prep_minutes")),
     cook_minutes: int(formData.get("cook_minutes")),
     servings: int(formData.get("servings")) || 4,

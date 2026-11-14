@@ -36,6 +36,7 @@ export function CookMode({
   name,
   backHref,
   ketoNote,
+  notes,
   ingredients,
   steps,
 }: {
@@ -47,6 +48,8 @@ export function CookMode({
   name: string;
   backHref: string;
   ketoNote: string;
+  /** Family notes on the recipe. */
+  notes: string;
   ingredients: Ing[];
   steps: string[];
 }) {
@@ -266,6 +269,12 @@ export function CookMode({
       {ketoNote && (
         <Notice tone="success" className={cn("mt-4", large ? "text-xl" : "text-base")}>
           {ketoNote}
+        </Notice>
+      )}
+
+      {notes && (
+        <Notice tone="info" className={cn("mt-3", large ? "text-xl" : "text-base")}>
+          <b>Family notes:</b> {notes}
         </Notice>
       )}
 

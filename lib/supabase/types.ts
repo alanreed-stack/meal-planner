@@ -311,6 +311,7 @@ export type Database = {
           image_url: string | null;
           keto_swap: string | null;
           name: string;
+          notes: string | null;
           prep_minutes: number | null;
           rating: number | null;
           servings: number;
@@ -333,6 +334,7 @@ export type Database = {
           image_url?: string | null;
           keto_swap?: string | null;
           name: string;
+          notes?: string | null;
           prep_minutes?: number | null;
           rating?: number | null;
           servings?: number;
@@ -355,6 +357,7 @@ export type Database = {
           image_url?: string | null;
           keto_swap?: string | null;
           name?: string;
+          notes?: string | null;
           prep_minutes?: number | null;
           rating?: number | null;
           servings?: number;
