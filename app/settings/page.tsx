@@ -25,7 +25,7 @@ export default async function SettingsPage() {
     .order("created_at");
   const { data: hh } = await supabase
     .from("households")
-    .select("default_protein_lbs, dinner_time, kroger_location_id, kroger_store_name")
+    .select("default_protein_lbs, dinner_time, kroger_location_id, kroger_store_name, thaw_reminder")
     .eq("id", householdId)
     .single();
   const { data: staples } = await supabase
@@ -93,11 +93,23 @@ export default async function SettingsPage() {
                 />
               </Field>
             </div>
+            <input type="hidden" name="planning" value="1" />
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="thaw"
+                defaultChecked={hh?.thaw_reminder ?? false}
+                className="mt-0.5 size-5 shrink-0 accent-primary"
+              />
+              <span>
+                <b>Thaw reminder.</b> <span className="text-muted">In the afternoon before a meat dinner, remind me on Home to move the meat to the fridge.</span>
+              </span>
+            </label>
             <SubmitButton variant="primary">Save</SubmitButton>
           </form>
         </Card>
 
-        <Card as="section" className="space-y-4" aria-labelledby="h-staples">
+        <Card as="section" id="staples" className="scroll-mt-4 space-y-4" aria-labelledby="h-staples">
           <div>
             <h2 id="h-staples" className="text-lg font-semibold">
               Things we always have

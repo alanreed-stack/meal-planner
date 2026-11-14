@@ -52,6 +52,7 @@ export type Database = {
           kroger_location_id: string | null;
           kroger_store_name: string | null;
           name: string;
+          thaw_reminder: boolean;
           zip: string | null;
         };
         Insert: {
@@ -63,6 +64,7 @@ export type Database = {
           kroger_location_id?: string | null;
           kroger_store_name?: string | null;
           name?: string;
+          thaw_reminder?: boolean;
           zip?: string | null;
         };
         Update: {
@@ -74,6 +76,7 @@ export type Database = {
           kroger_location_id?: string | null;
           kroger_store_name?: string | null;
           name?: string;
+          thaw_reminder?: boolean;
           zip?: string | null;
         };
         Relationships: [];

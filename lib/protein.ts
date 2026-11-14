@@ -10,7 +10,7 @@ function classify(name: string): Protein {
   if (/salmon|cod\b|tuna|tilapia|fish/.test(n)) return "fish";
   if (/chicken/.test(n)) return "chicken";
   if (/turkey/.test(n)) return "turkey";
-  if (/beef|steak|flank|sirloin|brisket/.test(n)) return "beef";
+  if (/beef|steak|flank|sirloin|brisket|chuck|ribeye|rib-eye|rib eye|short rib/.test(n)) return "beef";
   if (/pork|bacon|sausage|ham\b/.test(n)) return "pork";
   if (/lamb/.test(n)) return "lamb";
   return "none";

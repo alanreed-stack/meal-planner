@@ -71,6 +71,7 @@ export async function addMeal(formData: FormData) {
   });
   if (kind === "recipe") await touchPlan(supabase, week.id);
   revalidatePath("/plan");
+  revalidatePath("/");
   if (formData.get("go")) redirect(`/plan?w=${weekStart}`);
 }
 
@@ -209,18 +210,21 @@ export async function rateMeal(formData: FormData) {
   }
   revalidatePath("/plan");
   revalidatePath("/recipes");
+  revalidatePath("/");
 }
 
 /** Saves the usual meat weight and dinner time together. */
 export async function savePlanSettings(formData: FormData) {
   const { supabase, householdId } = await requireHousehold();
-  const update: { default_protein_lbs?: number; dinner_time?: string } = {};
+  const update: { default_protein_lbs?: number; dinner_time?: string; thaw_reminder?: boolean } = {};
   const n = Number(formData.get("lbs"));
   if (Number.isFinite(n) && formData.get("lbs") !== "") {
     update.default_protein_lbs = Math.min(10, Math.max(0.5, n));
   }
   const t = String(formData.get("time") ?? "");
   if (/^\d{2}:\d{2}$/.test(t)) update.dinner_time = t;
+  // An unticked box sends nothing, so the form says it is the settings form.
+  if (formData.get("planning") === "1") update.thaw_reminder = formData.get("thaw") === "on";
   const { data: before } = await supabase
     .from("households")
     .select("default_protein_lbs")

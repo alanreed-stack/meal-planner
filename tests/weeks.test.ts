@@ -97,3 +97,93 @@ describe("describeBuild (the message after building a list)", () => {
     expect(r({ empty: true })).toBe("Nothing to list yet. Plan some recipes first.");
   });
 });
+
+import { gettingStarted } from "@/lib/getting-started";
+import { headsUp, isLongCook } from "@/lib/heads-up";
+import { quickPicks, weekStatus, type QuickCand } from "@/lib/home-week";
+
+describe("gettingStarted", () => {
+  const s = { recipes: 0, plannedDinners: 0, hasStore: false, krogerConnected: false, staples: 0 };
+  it("starts with nothing done", () => {
+    const r = gettingStarted(s);
+    expect(r.doneCount).toBe(0);
+    expect(r.allDone).toBe(false);
+    expect(r.items).toHaveLength(5);
+  });
+  it("checks each line off by itself", () => {
+    const r = gettingStarted({ ...s, recipes: 70, plannedDinners: 3, hasStore: true });
+    expect(r.items.filter((i) => i.done).map((i) => i.key)).toEqual(["recipes", "plan", "store"]);
+    expect(r.allDone).toBe(false);
+  });
+  it("is finished when all five are done", () => {
+    expect(gettingStarted({ recipes: 1, plannedDinners: 1, hasStore: true, krogerConnected: true, staples: 1 }).allDone).toBe(true);
+  });
+});
+
+describe("weekStatus", () => {
+  it("reads like a sentence of links", () => {
+    expect(weekStatus({ dinners: 5, listBuilt: true, toOrder: 24, inCart: 18 })).toEqual([
+      { text: "5 of 7 dinners planned", to: "plan" },
+      { text: "list built", to: "shopping" },
+      { text: "18 of 24 in cart", to: "shopping" },
+    ]);
+  });
+  it("leaves out the cart when there is nothing to order", () => {
+    expect(weekStatus({ dinners: 0, listBuilt: false, toOrder: 0, inCart: 0 }).map((p) => p.text)).toEqual([
+      "0 of 7 dinners planned",
+      "no list yet",
+    ]);
+  });
+});
+
+describe("headsUp", () => {
+  const base = { name: "Pot Roast", prepMinutes: 5, cookMinutes: 480, tags: [] as string[], protein: "beef" };
+  it("gives a start-by time for a long cook", () => {
+    expect(isLongCook(base)).toBe(true);
+    expect(headsUp(base, "18:00:00", false)).toEqual(["Tomorrow: start Pot Roast by 9:55 AM."]);
+  });
+  it("treats a slow-cooker tag as a long cook even when the time is short", () => {
+    expect(isLongCook({ cookMinutes: 30, tags: ["slow-cooker"] })).toBe(true);
+  });
+  it("says nothing for a quick meal", () => {
+    expect(headsUp({ ...base, cookMinutes: 25, prepMinutes: 10 }, "18:00:00", false)).toEqual([]);
+  });
+  it("adds the thaw reminder only when it is turned on and there is meat", () => {
+    const quick = { ...base, cookMinutes: 25, prepMinutes: 10, protein: "chicken" };
+    expect(headsUp(quick, "18:00:00", true)).toEqual(["Tomorrow's chicken: if it is frozen, move it to the fridge tonight."]);
+    expect(headsUp(quick, "18:00:00", false)).toEqual([]);
+    expect(headsUp({ ...quick, protein: "none" }, "18:00:00", true)).toEqual([]);
+  });
+  it("can give both at once", () => {
+    expect(headsUp(base, "18:00:00", true)).toHaveLength(2);
+  });
+});
+
+describe("quickPicks", () => {
+  const c = (id: string, over: Partial<QuickCand> = {}): QuickCand => ({
+    id, name: id, diet: "both", favorite: false, minutes: 25, lastDay: null, ...over,
+  });
+  const today = "2026-11-16";
+  it("prefers favorites, and only quick ones", () => {
+    const picks = quickPicks([c("slow", { minutes: 90, favorite: true }), c("a", { favorite: true }), c("b"), c("c", { favorite: true })], "home", today);
+    expect(picks.map((p) => p.id)).not.toContain("slow");
+    expect(picks.slice(0, 2).every((p) => p.favorite)).toBe(true);
+    expect(picks).toHaveLength(3);
+  });
+  it("skips what was made in the last two weeks", () => {
+    const picks = quickPicks([c("recent", { favorite: true, lastDay: "2026-11-10" }), c("old", { lastDay: "2026-10-01" })], "home", today);
+    expect(picks.map((p) => p.id)).toEqual(["old"]);
+  });
+  it("respects home and travel weeks", () => {
+    const cands = [c("fam", { diet: "family" }), c("keto", { diet: "keto" }), c("both")];
+    expect(quickPicks(cands, "home", today).map((p) => p.id).sort()).toEqual(["both", "keto"]);
+    expect(quickPicks(cands, "travel", today).map((p) => p.id).sort()).toEqual(["both", "fam"]);
+  });
+  it("is steady within a day and varies from day to day", () => {
+    const cands = Array.from({ length: 12 }, (_, i) => c("r" + i));
+    const a = quickPicks(cands, "home", today).map((p) => p.id);
+    expect(quickPicks(cands, "home", today).map((p) => p.id)).toEqual(a);
+    const days = ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"].map((d) => quickPicks(cands, "home", d).map((p) => p.id).join());
+    expect(new Set([a.join(), ...days]).size).toBeGreaterThan(1);
+  });
+});

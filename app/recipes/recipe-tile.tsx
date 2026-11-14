@@ -14,11 +14,23 @@ const LOOK: Record<string, { Icon: ComponentType<{ className?: string; "aria-hid
 };
 
 /** The picture area for a recipe that has no photo. */
-export function RecipeTile({ protein, className }: { protein: string; className?: string }) {
+export function RecipeTile({
+  protein,
+  className,
+  compact = false,
+}: {
+  protein: string;
+  className?: string;
+  /** A small square for list rows. */
+  compact?: boolean;
+}) {
   const { Icon, tone } = LOOK[protein] ?? LOOK.none;
   return (
-    <div aria-hidden className={cn("flex h-36 w-full items-center justify-center", tone, className)}>
-      <Icon aria-hidden className="size-14 opacity-60" />
+    <div
+      aria-hidden
+      className={cn("flex items-center justify-center", compact ? "size-10 shrink-0 rounded-md" : "h-36 w-full", tone, className)}
+    >
+      <Icon aria-hidden className={cn("opacity-60", compact ? "size-5" : "size-14")} />
     </div>
   );
 }
