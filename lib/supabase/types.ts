@@ -113,6 +113,7 @@ export type Database = {
           confidence: string | null;
           description: string | null;
           household_id: string;
+          image_url: string | null;
           name_key: string;
           order_qty: number;
           price: number | null;
@@ -126,6 +127,7 @@ export type Database = {
           confidence?: string | null;
           description?: string | null;
           household_id: string;
+          image_url?: string | null;
           name_key: string;
           order_qty?: number;
           price?: number | null;
@@ -139,6 +141,7 @@ export type Database = {
           confidence?: string | null;
           description?: string | null;
           household_id?: string;
+          image_url?: string | null;
           name_key?: string;
           order_qty?: number;
           price?: number | null;
@@ -371,6 +374,7 @@ export type Database = {
           household_id: string;
           id: string;
           kroger_description: string | null;
+          kroger_image: string | null;
           kroger_price: number | null;
           kroger_product_id: string | null;
           kroger_size: string | null;
@@ -394,6 +398,7 @@ export type Database = {
           household_id: string;
           id?: string;
           kroger_description?: string | null;
+          kroger_image?: string | null;
           kroger_price?: number | null;
           kroger_product_id?: string | null;
           kroger_size?: string | null;
@@ -417,6 +422,7 @@ export type Database = {
           household_id?: string;
           id?: string;
           kroger_description?: string | null;
+          kroger_image?: string | null;
           kroger_price?: number | null;
           kroger_product_id?: string | null;
           kroger_size?: string | null;

@@ -10,10 +10,14 @@ import { describeBuild } from "@/lib/build-summary";
 export function BuildListForm({
   week,
   variant = "secondary",
+  size,
+  className,
   children,
 }: {
   week: string;
   variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
+  className?: string;
   children: ReactNode;
 }) {
   const toast = useToast();
@@ -29,7 +33,9 @@ export function BuildListForm({
       }}
     >
       <input type="hidden" name="week" value={week} />
-      <SubmitButton variant={variant}>{children}</SubmitButton>
+      <SubmitButton variant={variant} size={size} className={className}>
+        {children}
+      </SubmitButton>
     </form>
   );
 }

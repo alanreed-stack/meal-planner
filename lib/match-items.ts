@@ -20,6 +20,7 @@ export async function rememberMatch(
     size: string | null;
     price: number | null;
     confidence: "ok" | "low";
+    image?: string | null;
     resetQty?: boolean;
   }
 ) {
@@ -32,6 +33,7 @@ export async function rememberMatch(
     size: m.size,
     price: m.price,
     confidence: m.confidence,
+    image_url: m.image ?? null,
     // A different product has a different package size, so an old override no longer applies.
     ...(m.resetQty ? { qty_override: null } : {}),
     updated_at: new Date().toISOString(),
@@ -97,6 +99,7 @@ export async function matchWeekItems(
               kroger_size: p.size || null,
               kroger_price: p.price,
               match_confidence: pick.confidence,
+              kroger_image: p.image,
               ...(item.order_qty_manual ? {} : { order_qty: packs }),
               sent_at: null,
               sent_qty: 0,
@@ -109,6 +112,7 @@ export async function matchWeekItems(
             size: p.size || null,
             price: p.price,
             confidence: pick.confidence,
+            image: p.image,
           });
           matched++;
         } catch {

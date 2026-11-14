@@ -97,7 +97,19 @@ export type Product = {
   size: string;
   price: number | null;
   categories: string[];
+  /** A small front-of-package photo, when Kroger has one. */
+  image: string | null;
 };
+
+type KrogerImages = { perspective?: string; sizes?: { size?: string; url?: string }[] }[] | undefined;
+
+/** The front photo at a small size (about 200px is plenty for a thumbnail), or the nearest thing Kroger has. */
+export function pickImage(images: KrogerImages): string | null {
+  const front = images?.find((i) => i.perspective === "front") ?? images?.[0];
+  const sizes = front?.sizes ?? [];
+  const pick = ["small", "thumbnail", "medium"].map((s) => sizes.find((x) => x.size === s)).find(Boolean) ?? sizes[0];
+  return pick?.url && pick.url.startsWith("https://") ? pick.url : null;
+}
 
 export async function searchProducts(term: string, locationId: string, limit = 6): Promise<Product[]> {
   const json = await get("/products", {
@@ -112,6 +124,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
       description: string;
       brand?: string;
       categories?: string[];
+      images?: { perspective?: string; sizes?: { size?: string; url?: string }[] }[];
       items?: { size?: string; price?: { regular?: number; promo?: number } }[];
     }) => {
       const item = p.items?.[0];
@@ -124,6 +137,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
         size: item?.size ?? "",
         price,
         categories: p.categories ?? [],
+        image: pickImage(p.images),
       };
     }
   );

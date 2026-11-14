@@ -69,6 +69,18 @@ export default async function MatchPage({
         <Card as="ul" padded={false} className="divide-y divide-border">
           {results.map((p) => (
             <li key={p.upc} className="flex items-center gap-3 px-3 py-2 text-sm">
+              {p.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.image}
+                  alt=""
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="size-14 shrink-0 rounded-md bg-white object-contain"
+                />
+              ) : (
+                <span aria-hidden className="size-14 shrink-0 rounded-md bg-surface-muted" />
+              )}
               <div className="min-w-0 flex-1">
                 <div className="truncate">{p.description}</div>
                 <div className="text-xs text-muted tabular-nums">
@@ -87,6 +99,7 @@ export default async function MatchPage({
                 />
                 <input type="hidden" name="price" value={p.price ?? ""} />
                 <input type="hidden" name="size" value={p.size} />
+                <input type="hidden" name="image" value={p.image ?? ""} />
                 <SubmitButton>Use this</SubmitButton>
               </form>
             </li>

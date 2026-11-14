@@ -49,6 +49,7 @@ export async function priceRecipe(formData: FormData) {
             size: p.size || null,
             price: p.price,
             confidence: pick.confidence,
+            image_url: p.image,
             updated_at: new Date().toISOString(),
           });
         } catch {

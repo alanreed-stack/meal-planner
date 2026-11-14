@@ -10,6 +10,7 @@ const product = (description: string, over: Partial<Product> = {}): Product => (
   size: "1 lb",
   price: 4.99,
   categories: [],
+  image: null,
   ...over,
 });
 

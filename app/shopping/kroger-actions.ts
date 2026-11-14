@@ -68,6 +68,8 @@ export async function chooseProduct(formData: FormData) {
   const upc = String(formData.get("upc"));
   const productId = String(formData.get("product_id"));
   const description = String(formData.get("description"));
+  const image = String(formData.get("image") ?? "");
+  const imageUrl = image.startsWith("https://") ? image : null;
 
   const { data: it } = await supabase
     .from("shopping_items")
@@ -83,6 +85,7 @@ export async function chooseProduct(formData: FormData) {
       size,
       price: cleanPrice,
       confidence: "ok",
+      image: imageUrl,
       resetQty: true,
     });
     const { packs } = packagesNeeded(
@@ -97,6 +100,7 @@ export async function chooseProduct(formData: FormData) {
         kroger_description: description,
         kroger_size: size,
         kroger_price: cleanPrice,
+        kroger_image: imageUrl,
         match_confidence: "ok",
         order_qty: packs,
         order_qty_manual: false,
@@ -147,6 +151,22 @@ export async function setQty(formData: FormData) {
       .eq("household_id", householdId)
       .eq("name_key", keyOf(it.name));
   }
+  revalidatePath("/shopping");
+}
+
+/** The plus and minus on a list row: sets the number of packages by hand. */
+export async function setPacks(id: string, qty: number) {
+  const { supabase, householdId } = await requireHousehold();
+  const n = Math.min(50, Math.max(1, Math.round(Number(qty) || 1)));
+  const { data: it } = await supabase.from("shopping_items").select("name, sent_at, sent_qty").eq("id", id).single();
+  if (!it) return;
+  // If the cart already holds at least this many, the row stays "in cart"; otherwise it needs sending again.
+  const covered = it.sent_qty > 0 && it.sent_qty >= n;
+  await supabase
+    .from("shopping_items")
+    .update({ order_qty: n, order_qty_manual: true, sent_at: covered ? (it.sent_at ?? new Date().toISOString()) : null })
+    .eq("id", id);
+  await supabase.from("kroger_matches").update({ qty_override: n }).eq("household_id", householdId).eq("name_key", keyOf(it.name));
   revalidatePath("/shopping");
 }
 
