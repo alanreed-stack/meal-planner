@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { BookOpen, CalendarDays, Home, Settings, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -19,9 +20,30 @@ function isActive(path: string, href: string) {
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
+// Week and Shopping always describe the same week. While you are on one of them with ?w=..., the other tab keeps it.
+const WEEK_TABS = new Set(["/plan", "/shopping"]);
+const onWeekPage = (path: string) => [...WEEK_TABS].some((t) => isActive(path, t));
+const validWeek = (w: string | null) => (w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : null);
+
 /** Links along the top on a computer, a tab bar along the bottom on a phone. */
 export function NavTabs() {
+  // useSearchParams needs a Suspense boundary. Until it resolves the tabs simply point at the current week.
+  return (
+    <Suspense fallback={<Tabs week={null} />}>
+      <TabsWithWeek />
+    </Suspense>
+  );
+}
+
+function TabsWithWeek() {
   const path = usePathname();
+  const w = useSearchParams().get("w");
+  return <Tabs week={onWeekPage(path) ? validWeek(w) : null} />;
+}
+
+function Tabs({ week }: { week: string | null }) {
+  const path = usePathname();
+  const to = (href: string) => (week && WEEK_TABS.has(href) ? `${href}?w=${week}` : href);
   return (
     <>
       <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -30,7 +52,7 @@ export function NavTabs() {
           return (
             <Link
               key={href}
-              href={href}
+              href={to(href)}
               aria-current={on ? "page" : undefined}
               className={cn(
                 "rounded-sm px-3 py-2 text-sm",
@@ -55,7 +77,7 @@ export function NavTabs() {
             return (
               <li key={href}>
                 <Link
-                  href={href}
+                  href={to(href)}
                   aria-current={on ? "page" : undefined}
                   className={cn(
                     "relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px]",

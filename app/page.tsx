@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { KIND_LABEL } from "@/lib/meal-kinds";
-import { addDays, hourET, mondayOf, todayET } from "@/lib/dates";
+import { addDays, hourET, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
+import { groceryFocus, shouldPlanNextWeek } from "@/lib/home-week";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
@@ -18,7 +19,9 @@ export default async function Home() {
   const h = hourET();
   const greeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 
-  const [{ data: hh }, { data: meals }, { data: week }] = await Promise.all([
+  const nextMonday = addDays(monday, 7);
+
+  const [{ data: hh }, { data: meals }, { data: weekRows }] = await Promise.all([
     supabase.from("households").select("default_protein_lbs, dinner_time").eq("id", householdId).single(),
     supabase
       .from("planned_meals")
@@ -29,14 +32,21 @@ export default async function Home() {
       .order("day"),
     supabase
       .from("weeks")
-      .select("id")
+      .select("id, week_start")
       .eq("household_id", householdId)
-      .eq("week_start", monday)
-      .maybeSingle(),
+      .in("week_start", [monday, nextMonday]),
   ]);
-  const { data: items } = week
-    ? await supabase.from("shopping_items").select("to_order, sent_at").eq("week_id", week.id)
-    : { data: [] };
+  const weekId = (start: string) => (weekRows ?? []).find((w) => w.week_start === start)?.id;
+  const nextWeekId = weekId(nextMonday);
+  const ids = (weekRows ?? []).map((w) => w.id);
+  const [{ data: items }, { count: nextDinners }] = await Promise.all([
+    ids.length
+      ? supabase.from("shopping_items").select("week_id, to_order, sent_at").in("week_id", ids)
+      : Promise.resolve({ data: [] }),
+    nextWeekId
+      ? supabase.from("planned_meals").select("id", { count: "exact", head: true }).eq("week_id", nextWeekId).eq("slot", "dinner")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
   const dinnerTime = String(hh?.dinner_time ?? "18:00:00");
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
@@ -44,8 +54,15 @@ export default async function Home() {
   const tonight = all.filter((m) => m.day === today);
   const later = all.filter((m) => m.day !== today);
 
-  const toOrder = (items ?? []).filter((i) => i.to_order);
-  const inCart = toOrder.filter((i) => i.sent_at).length;
+  // The Groceries card follows whichever week still has something to send: this week, then next week.
+  const summary = (start: string) => {
+    const id = weekId(start);
+    const toOrder = (items ?? []).filter((i) => i.week_id === id && i.to_order);
+    return { monday: start, toOrder: toOrder.length, inCart: toOrder.filter((i) => i.sent_at).length };
+  };
+  const groceries = groceryFocus([summary(monday), summary(nextMonday)]);
+  const groceryWeek = weekRelation(groceries.monday, monday) ?? "This week";
+  const planNext = shouldPlanNextWeek(today, nextDinners ?? 0);
   const dow = (iso: string) =>
     new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
 
@@ -154,33 +171,51 @@ export default async function Home() {
           </Card>
         )}
 
+        {planNext && (
+          <Card as="section" tone="accent" aria-labelledby="plan-next">
+            <h2 id="plan-next" className="text-xs font-semibold tracking-wide text-primary-ink uppercase">
+              Next week
+            </h2>
+            <p className="mt-2 text-lg">
+              {nextDinners ? `Only ${nextDinners} dinner${nextDinners === 1 ? "" : "s"} planned so far.` : "Nothing is planned yet."}
+            </p>
+            <p className="text-sm text-muted">{weekLabel(nextMonday)}</p>
+            <ButtonLink href={`/plan?w=${nextMonday}`} variant="primary" className="mt-3">
+              <CalendarPlus aria-hidden className="size-4" /> Plan next week
+            </ButtonLink>
+          </Card>
+        )}
+
         <Card as="section" aria-labelledby="groceries">
           <SectionHeader>
             <span id="groceries">Groceries</span>
           </SectionHeader>
-          {toOrder.length === 0 ? (
+          <p className="mt-1 text-sm text-muted">
+            {groceryWeek} · {weekLabel(groceries.monday)}
+          </p>
+          {groceries.toOrder === 0 ? (
             <p className="mt-2 text-muted">No shopping list for this week yet.</p>
           ) : (
             <div className="mt-2">
               <p className="tabular-nums">
-                <b>{inCart}</b> of {toOrder.length} in your Kroger cart
+                <b>{groceries.inCart}</b> of {groceries.toOrder} in your Kroger cart
               </p>
               <div
                 role="progressbar"
                 aria-label="Items in Kroger cart"
                 aria-valuemin={0}
-                aria-valuemax={toOrder.length}
-                aria-valuenow={inCart}
+                aria-valuemax={groceries.toOrder}
+                aria-valuenow={groceries.inCart}
                 className="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted"
               >
                 <div
                   className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.round((inCart / toOrder.length) * 100)}%` }}
+                  style={{ width: `${Math.round((groceries.inCart / groceries.toOrder) * 100)}%` }}
                 />
               </div>
             </div>
           )}
-          <ButtonLink href="/shopping" className="mt-3">
+          <ButtonLink href={`/shopping?w=${groceries.monday}`} className="mt-3">
             <ShoppingCart aria-hidden className="size-4" /> Open shopping list
           </ButtonLink>
         </Card>

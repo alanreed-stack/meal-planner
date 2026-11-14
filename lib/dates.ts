@@ -46,3 +46,21 @@ export function hourET(): number {
     new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" }).format(new Date())
   ) % 24;
 }
+
+/**
+ * Says how far a week is from the current one: "Next week", "Last week", "In 3 weeks", "2 weeks ago".
+ * Null for the current week, so callers only show a label when the week on screen is a different one.
+ */
+export function weekRelation(monday: string, thisMonday: string): string | null {
+  const weeks = Math.round((Date.parse(monday + "T00:00:00Z") - Date.parse(thisMonday + "T00:00:00Z")) / (7 * 86_400_000));
+  if (weeks === 0) return null;
+  if (weeks === 1) return "Next week";
+  if (weeks === -1) return "Last week";
+  return weeks > 0 ? `In ${weeks} weeks` : `${-weeks} weeks ago`;
+}
+
+/** True on Saturday and Sunday, when next week is the one to be planning. */
+export function isWeekendDay(iso: string): boolean {
+  const dow = new Date(iso + "T00:00:00Z").getUTCDay();
+  return dow === 6 || dow === 0;
+}

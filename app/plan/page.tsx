@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, ShoppingCart } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { asDiet } from "@/lib/diet";
 import { KIND_LABEL } from "@/lib/meal-kinds";
-import { addDays, dayLabel, mondayOf, todayET, weekLabel } from "@/lib/dates";
+import { addDays, dayLabel, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { proteinLbs } from "@/lib/scale";
@@ -182,6 +182,7 @@ export default async function PlanPage({
 
   const weekHasToday = days.includes(today);
   const thisMonday = mondayOf(today);
+  const relation = weekRelation(monday, thisMonday);
   const plannedDays = new Set(dinners.map((m) => m.day));
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -197,6 +198,7 @@ export default async function PlanPage({
             <ChevronLeft aria-hidden className="size-5" />
           </IconLink>
           <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          {relation && <Badge tone="info">{relation}</Badge>}
           <IconLink href={`/plan?w=${addDays(monday, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
           </IconLink>
@@ -412,6 +414,12 @@ export default async function PlanPage({
               </Card>
             );
           })}
+        </div>
+
+        <div className="mt-6">
+          <ButtonLink href={`/shopping?w=${monday}`} size="lg" className="w-full sm:w-auto">
+            <ShoppingCart aria-hidden className="size-5" /> Shopping list for {relation?.toLowerCase() ?? "this week"}
+          </ButtonLink>
         </div>
       </main>
     </>

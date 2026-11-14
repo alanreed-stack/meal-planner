@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { CATEGORIES } from "@/lib/categories";
-import { addDays, isPast, mondayOf, todayET, weekLabel } from "@/lib/dates";
+import { addDays, isPast, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { addItem, deleteItem, generateList } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
@@ -34,6 +34,7 @@ export default async function ShoppingPage({
 }) {
   const { w, kroger, n, zip: zipParam } = await searchParams;
   const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
+  const relation = weekRelation(monday, mondayOf(todayET()));
   const { supabase, householdId } = await requireHousehold();
 
   const [{ data: hh }, { data: conn }] = await Promise.all([
@@ -156,6 +157,7 @@ export default async function ShoppingPage({
             <ChevronLeft aria-hidden className="size-5" />
           </IconLink>
           <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          {relation && <Badge tone="info">{relation}</Badge>}
           <IconLink href={`/shopping?w=${addDays(monday, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
           </IconLink>
