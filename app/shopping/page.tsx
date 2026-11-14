@@ -5,6 +5,8 @@ import { CATEGORIES } from "@/lib/categories";
 import { addDays, isPast, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { addItem, deleteItem } from "./actions";
 import { BuildListForm } from "./build-list";
+import { LiveRefresh } from "@/components/live-refresh";
+import { PrecachePage } from "@/components/service-worker";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { PackStepper } from "./pack-stepper";
 import { ShareList } from "./share-list";
@@ -333,6 +335,17 @@ export default async function ShoppingPage({
             </ButtonLink>
           )}
         </div>
+
+        {week && (
+          <LiveRefresh
+            sources={[
+              { table: "shopping_items", filter: `week_id=eq.${week.id}`, deletes: true },
+              { table: "weeks", filter: `id=eq.${week.id}` },
+            ]}
+            knownIds={list.map((i) => i.id)}
+          />
+        )}
+        {list.length > 0 && <PrecachePage href={`/shopping/store?w=${weekStart}`} />}
 
         <KrogerFlash status={kroger} n={n} week={weekStart} />
         {connExpired && kroger !== "expired" && (

@@ -113,6 +113,7 @@ export type Database = {
       };
       kroger_matches: {
         Row: {
+          aisle: string | null;
           confidence: string | null;
           description: string | null;
           household_id: string;
@@ -127,6 +128,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          aisle?: string | null;
           confidence?: string | null;
           description?: string | null;
           household_id: string;
@@ -141,6 +143,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          aisle?: string | null;
           confidence?: string | null;
           description?: string | null;
           household_id?: string;
@@ -376,6 +379,7 @@ export type Database = {
           created_at: string;
           household_id: string;
           id: string;
+          kroger_aisle: string | null;
           kroger_description: string | null;
           kroger_image: string | null;
           kroger_price: number | null;
@@ -400,6 +404,7 @@ export type Database = {
           created_at?: string;
           household_id: string;
           id?: string;
+          kroger_aisle?: string | null;
           kroger_description?: string | null;
           kroger_image?: string | null;
           kroger_price?: number | null;
@@ -424,6 +429,7 @@ export type Database = {
           created_at?: string;
           household_id?: string;
           id?: string;
+          kroger_aisle?: string | null;
           kroger_description?: string | null;
           kroger_image?: string | null;
           kroger_price?: number | null;

@@ -50,6 +50,7 @@ export async function priceRecipe(formData: FormData) {
             price: p.price,
             confidence: pick.confidence,
             image_url: p.image,
+            aisle: p.aisle,
             updated_at: new Date().toISOString(),
           });
         } catch {

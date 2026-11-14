@@ -99,6 +99,8 @@ export type Product = {
   categories: string[];
   /** A small front-of-package photo, when Kroger has one. */
   image: string | null;
+  /** Where it is in the chosen store, e.g. "Aisle 12", when Kroger says. */
+  aisle: string | null;
 };
 
 type KrogerImages = { perspective?: string; sizes?: { size?: string; url?: string }[] }[] | undefined;
@@ -109,6 +111,15 @@ export function pickImage(images: KrogerImages): string | null {
   const sizes = front?.sizes ?? [];
   const pick = ["small", "thumbnail", "medium"].map((s) => sizes.find((x) => x.size === s)).find(Boolean) ?? sizes[0];
   return pick?.url && pick.url.startsWith("https://") ? pick.url : null;
+}
+
+/** "Aisle 12" for a product, from the first place Kroger lists it. */
+export function pickAisle(locations: { description?: string; number?: string }[] | undefined): string | null {
+  const first = locations?.[0];
+  if (!first) return null;
+  const text = first.description?.trim();
+  if (text) return /^\d+$/.test(text) ? `Aisle ${text}` : text;
+  return first.number?.trim() ? `Aisle ${first.number.trim()}` : null;
 }
 
 export async function searchProducts(term: string, locationId: string, limit = 6): Promise<Product[]> {
@@ -125,6 +136,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
       brand?: string;
       categories?: string[];
       images?: { perspective?: string; sizes?: { size?: string; url?: string }[] }[];
+      aisleLocations?: { description?: string; number?: string }[];
       items?: { size?: string; price?: { regular?: number; promo?: number } }[];
     }) => {
       const item = p.items?.[0];
@@ -138,6 +150,7 @@ export async function searchProducts(term: string, locationId: string, limit = 6
         price,
         categories: p.categories ?? [],
         image: pickImage(p.images),
+        aisle: pickAisle(p.aisleLocations),
       };
     }
   );

@@ -108,7 +108,7 @@ export async function generateList(formData: FormData): Promise<BuildSummary> {
 
   const { data: saved } = await supabase
     .from("kroger_matches")
-    .select("name_key, upc, product_id, description, size, price, confidence, qty_override, image_url")
+    .select("name_key, upc, product_id, description, size, price, confidence, qty_override, image_url, aisle")
     .eq("household_id", householdId);
   const savedBy = new Map((saved ?? []).map((m) => [m.name_key, m]));
 
@@ -149,6 +149,7 @@ export async function generateList(formData: FormData): Promise<BuildSummary> {
           kroger_product_id: m?.product_id ?? null,
           kroger_description: m?.description ?? null,
           kroger_image: m?.image_url ?? null,
+          kroger_aisle: m?.aisle ?? null,
           kroger_price: m?.price ?? null,
           kroger_size: m?.size ?? null,
           match_confidence: m?.confidence ?? null,
@@ -210,7 +211,7 @@ export async function addItem(formData: FormData) {
   const category = picked && picked !== "auto" ? picked : (guessAisle(name) ?? "other");
   const { data: m } = await supabase
     .from("kroger_matches")
-    .select("upc, product_id, description, size, price, confidence, qty_override, image_url")
+    .select("upc, product_id, description, size, price, confidence, qty_override, image_url, aisle")
     .eq("household_id", householdId)
     .eq("name_key", name.toLowerCase())
     .maybeSingle();
@@ -227,6 +228,7 @@ export async function addItem(formData: FormData) {
     kroger_product_id: m?.product_id ?? null,
     kroger_description: m?.description ?? null,
     kroger_image: m?.image_url ?? null,
+    kroger_aisle: m?.aisle ?? null,
     kroger_price: m?.price ?? null,
     kroger_size: m?.size ?? null,
     match_confidence: m?.confidence ?? null,

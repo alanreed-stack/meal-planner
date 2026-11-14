@@ -11,6 +11,7 @@ import { RowButton } from "@/components/ui/row-button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 import { nowMs } from "@/lib/dates";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import { readKey, removeOld, serverSnapshot, subscribe, writeKey } from "@/lib/cook-store";
 import {
   cookKey,
@@ -65,7 +66,7 @@ export function CookMode({
   const changeSize = (s: Size) => writeKey(SIZE_KEY, s);
 
   const [now, setNow] = useState(0);
-  const [screen, setScreen] = useState<"checking" | "on" | "off" | "unsupported">("checking");
+  const screen = useWakeLock();
 
   const audio = useRef<AudioContext | null>(null);
   const rung = useRef<Set<string>>(new Set());
@@ -92,41 +93,6 @@ export function CookMode({
 
   // Progress from other days is thrown away.
   useEffect(() => removeOld((k) => isOldCookKey(k, today)), [today]);
-
-  // ---- keep the screen awake. Browsers drop the lock when the tab is hidden, so ask again.
-  useEffect(() => {
-    let lock: WakeLockSentinel | null = null;
-    let cancelled = false;
-
-    async function acquire() {
-      if (!("wakeLock" in navigator)) {
-        if (!cancelled) setScreen("unsupported");
-        return;
-      }
-      try {
-        lock = await navigator.wakeLock.request("screen");
-        if (cancelled) {
-          await lock.release();
-          return;
-        }
-        setScreen("on");
-        lock.addEventListener("release", () => setScreen("off"));
-      } catch {
-        if (!cancelled) setScreen("off");
-      }
-    }
-
-    void acquire();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void acquire();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
-      void lock?.release();
-    };
-  }, []);
 
   // ---- timers: a clock that ticks while any exist, and rings once when one runs out
   const ring = useCallback(() => {

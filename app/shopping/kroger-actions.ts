@@ -70,6 +70,7 @@ export async function chooseProduct(formData: FormData) {
   const description = String(formData.get("description"));
   const image = String(formData.get("image") ?? "");
   const imageUrl = image.startsWith("https://") ? image : null;
+  const aisle = String(formData.get("aisle") ?? "").trim().slice(0, 60) || null;
 
   const { data: it } = await supabase
     .from("shopping_items")
@@ -86,6 +87,7 @@ export async function chooseProduct(formData: FormData) {
       price: cleanPrice,
       confidence: "ok",
       image: imageUrl,
+      aisle,
       resetQty: true,
     });
     const { packs } = packagesNeeded(
@@ -101,6 +103,7 @@ export async function chooseProduct(formData: FormData) {
         kroger_size: size,
         kroger_price: cleanPrice,
         kroger_image: imageUrl,
+        kroger_aisle: aisle,
         match_confidence: "ok",
         order_qty: packs,
         order_qty_manual: false,

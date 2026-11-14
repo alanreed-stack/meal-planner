@@ -28,6 +28,7 @@ import { CopyLastWeek } from "./copy-last-week";
 import { DayPills } from "./day-pills";
 import { DragHandle } from "./drag-handle";
 import { PlanProvider } from "./plan-context";
+import { LiveRefresh } from "@/components/live-refresh";
 import { SwapMeal } from "./swap-meal";
 import { FillWeek } from "./fill-week";
 import { RateRow } from "./rate-row";
@@ -398,6 +399,15 @@ export default async function PlanPage({
     <>
       <Nav />
       {weekHasToday && !w && <ScrollToToday targetId={`day-${today}`} />}
+      {week && (
+        <LiveRefresh
+          sources={[
+            { table: "planned_meals", filter: `week_id=eq.${week.id}`, deletes: true },
+            { table: "weeks", filter: `id=eq.${week.id}` },
+          ]}
+          knownIds={(meals ?? []).map((m) => m.id)}
+        />
+      )}
       <main className="mx-auto w-full max-w-5xl px-4 py-6 lg:max-w-7xl">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <IconLink href={`/plan?w=${addDays(weekStart, -7)}`} label="Previous week">

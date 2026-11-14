@@ -25,3 +25,21 @@ describe("pickImage", () => {
     expect(pickImage([img("front", { small: "http://x/insecure.jpg" })])).toBeNull();
   });
 });
+
+import { pickAisle } from "@/lib/kroger";
+
+describe("pickAisle", () => {
+  it("uses Kroger's own wording", () => {
+    expect(pickAisle([{ description: "Aisle 12", number: "12" }])).toBe("Aisle 12");
+    expect(pickAisle([{ description: "Produce" }])).toBe("Produce");
+  });
+  it("turns a bare number into an aisle", () => {
+    expect(pickAisle([{ description: "7" }])).toBe("Aisle 7");
+    expect(pickAisle([{ number: "9" }])).toBe("Aisle 9");
+  });
+  it("is null when Kroger does not say", () => {
+    expect(pickAisle(undefined)).toBeNull();
+    expect(pickAisle([])).toBeNull();
+    expect(pickAisle([{}])).toBeNull();
+  });
+});

@@ -10,6 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff", // one value only; the light/dark theme-color tags in the layout override it
+    shortcuts: [{ name: "In-store list", short_name: "In-store", url: "/shopping/store" }],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

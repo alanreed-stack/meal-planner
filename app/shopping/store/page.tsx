@@ -1,13 +1,9 @@
 import { CATEGORIES } from "@/lib/categories";
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
 import { weekStartOf, todayET, weekLabel } from "@/lib/dates";
 import { formatIngredient } from "@/lib/format";
-import { resetPicked } from "../actions";
 import { StoreList, type StoreItem } from "./store-list";
-import { ButtonLink } from "@/components/ui/button";
-import { SubmitButton } from "@/components/ui/submit-button";
 
 export const metadata: Metadata = { title: "In-store list" };
 
@@ -26,7 +22,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   const { data: rows } = week
     ? await supabase
         .from("shopping_items")
-        .select("id, name, qty, unit, category, picked, sent_at, kroger_size, order_qty")
+        .select("id, name, qty, unit, category, picked, sent_at, kroger_description, kroger_aisle, order_qty")
         .eq("week_id", week.id)
         .eq("to_order", true)
     : { data: [] };
@@ -37,26 +33,13 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
     category: CATEGORIES.includes(i.category) ? i.category : "other",
     picked: i.picked,
     inCart: !!i.sent_at,
+    product: i.kroger_description ? `${i.order_qty} × ${i.kroger_description.replace(/ · /g, " ")}` : null,
+    aisle: i.kroger_aisle,
   }));
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-xl bg-background px-4 pb-20">
-      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-2 backdrop-blur">
-        <ButtonLink href={`/shopping?w=${weekStart}`} size="sm">
-          <ArrowLeft aria-hidden className="size-4" /> Back
-        </ButtonLink>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold">In-store list</h1>
-          <p className="text-xs text-muted tabular-nums">{weekLabel(weekStart)}</p>
-        </div>
-        <form action={resetPicked}>
-          <input type="hidden" name="week" value={weekStart} />
-          <SubmitButton variant="ghost" size="sm">
-            Start over
-          </SubmitButton>
-        </form>
-      </header>
-      <StoreList items={items} order={CATEGORIES} />
+      <StoreList items={items} order={CATEGORIES} weekId={week?.id ?? null} weekStart={weekStart} weekText={weekLabel(weekStart)} />
     </div>
   );
 }

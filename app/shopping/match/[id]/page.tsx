@@ -84,7 +84,7 @@ export default async function MatchPage({
               <div className="min-w-0 flex-1">
                 <div className="truncate">{p.description}</div>
                 <div className="text-xs text-muted tabular-nums">
-                  {[p.brand, p.size].filter(Boolean).join(" · ")}
+                  {[p.brand, p.size, p.aisle].filter(Boolean).join(" · ")}
                   {p.price ? ` · $${p.price.toFixed(2)}` : ""}
                 </div>
               </div>
@@ -100,6 +100,7 @@ export default async function MatchPage({
                 <input type="hidden" name="price" value={p.price ?? ""} />
                 <input type="hidden" name="size" value={p.size} />
                 <input type="hidden" name="image" value={p.image ?? ""} />
+                <input type="hidden" name="aisle" value={p.aisle ?? ""} />
                 <SubmitButton>Use this</SubmitButton>
               </form>
             </li>
