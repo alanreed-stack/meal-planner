@@ -5,7 +5,7 @@ import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { asDiet } from "@/lib/diet";
 import { KIND_LABEL } from "@/lib/meal-kinds";
-import { addDays, dayLabel, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
+import { addDays, dayLabel, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { mainProtein } from "@/lib/protein";
 import { proteinLbs } from "@/lib/scale";
@@ -45,7 +45,7 @@ export default async function PlanPage({
 }) {
   const { w, add } = await searchParams;
   const today = todayET();
-  const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : today);
+  const weekStart = weekStartOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : today);
   const { supabase, householdId } = await requireHousehold();
 
   const [{ data: week }, { data: recipes }, { data: allIngs }, { data: history }, { data: hh }] =
@@ -54,7 +54,7 @@ export default async function PlanPage({
         .from("weeks")
         .select("id, mode")
         .eq("household_id", householdId)
-        .eq("week_start", monday)
+        .eq("week_start", weekStart)
         .maybeSingle(),
       supabase
         .from("recipes")
@@ -66,8 +66,8 @@ export default async function PlanPage({
         .from("planned_meals")
         .select("recipe_id, day")
         .not("recipe_id", "is", null)
-        .lt("day", monday)
-        .gte("day", addDays(monday, -365)),
+        .lt("day", weekStart)
+        .gte("day", addDays(weekStart, -365)),
       supabase
         .from("households")
         .select("default_protein_lbs, dinner_time")
@@ -85,7 +85,7 @@ export default async function PlanPage({
 
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
   const dinnerTime = String(hh?.dinner_time ?? "18:00:00");
-  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // ---- what we know about each recipe: main meat, meat weight, last time it was planned
   const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string }[]>();
@@ -111,7 +111,7 @@ export default async function PlanPage({
   const weeksAgo = (id: string) => {
     const l = lastDay.get(id);
     if (!l) return null;
-    const diff = (Date.parse(monday + "T00:00:00Z") - Date.parse(l + "T00:00:00Z")) / 86_400_000;
+    const diff = (Date.parse(weekStart + "T00:00:00Z") - Date.parse(l + "T00:00:00Z")) / 86_400_000;
     return Math.max(1, Math.ceil(diff / 7));
   };
   const minutesOf = (r: { prep_minutes: number | null; cook_minutes: number | null }) =>
@@ -161,7 +161,7 @@ export default async function PlanPage({
     };
   }
   const emptyDays = days.filter((d) => !dinners.some((m) => m.day === d));
-  const fillInput: FillInput = { days, existing, cands, mode, monday };
+  const fillInput: FillInput = { days, existing, cands, mode, weekStart };
   const labels = Object.fromEntries(days.map((d) => [d, shortDay(d)]));
 
   const plannedIds = new Set((meals ?? []).map((m) => m.recipe_id).filter(Boolean));
@@ -181,8 +181,8 @@ export default async function PlanPage({
   };
 
   const weekHasToday = days.includes(today);
-  const thisMonday = mondayOf(today);
-  const relation = weekRelation(monday, thisMonday);
+  const thisWeekStart = weekStartOf(today);
+  const relation = weekRelation(weekStart, thisWeekStart);
   const plannedDays = new Set(dinners.map((m) => m.day));
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -194,25 +194,25 @@ export default async function PlanPage({
       {weekHasToday && !w && <ScrollToToday targetId={`day-${today}`} />}
       <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <IconLink href={`/plan?w=${addDays(monday, -7)}`} label="Previous week">
+          <IconLink href={`/plan?w=${addDays(weekStart, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />
           </IconLink>
-          <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          <h1 className="text-xl font-bold tabular-nums">{weekLabel(weekStart)}</h1>
           {relation && <Badge tone="info">{relation}</Badge>}
-          <IconLink href={`/plan?w=${addDays(monday, 7)}`} label="Next week">
+          <IconLink href={`/plan?w=${addDays(weekStart, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
           </IconLink>
-          {monday !== thisMonday && (
+          {weekStart !== thisWeekStart && (
             <ButtonLink href="/plan" variant="ghost">
               This week
             </ButtonLink>
           )}
           <span className="flex-1" />
-          <CopyLastWeek week={monday} />
+          <CopyLastWeek week={weekStart} />
         </div>
 
         <form action={setMode} className="mb-2">
-          <input type="hidden" name="week" value={monday} />
+          <input type="hidden" name="week" value={weekStart} />
           <Segmented
             label="Kind of week"
             name="mode"
@@ -253,7 +253,7 @@ export default async function PlanPage({
             title="A fresh week"
             className="mb-4"
             action={
-              <CopyLastWeek week={monday} variant="secondary" />
+              <CopyLastWeek week={weekStart} variant="secondary" />
             }
           >
             Nothing is planned yet. Let us suggest dinners with the button below, copy last week, or add meals
@@ -261,7 +261,7 @@ export default async function PlanPage({
           </EmptyState>
         )}
 
-        <FillWeek week={monday} input={fillInput} emptyDays={emptyDays} labels={labels} />
+        <FillWeek week={weekStart} input={fillInput} emptyDays={emptyDays} labels={labels} />
 
         <DayPills days={days} today={today} planned={plannedDays} />
 
@@ -387,7 +387,7 @@ export default async function PlanPage({
                             <span className="text-muted">Keto plate with the same meat:</span>
                             {ideas.map((k) => (
                               <form action={addMeal} key={k.id}>
-                                <input type="hidden" name="week" value={monday} />
+                                <input type="hidden" name="week" value={weekStart} />
                                 <input type="hidden" name="day" value={day} />
                                 <input type="hidden" name="slot" value={m.slot} />
                                 <input type="hidden" name="recipe_id" value={k.id} />
@@ -404,7 +404,7 @@ export default async function PlanPage({
                   {dayMeals.length === 0 && <li className="text-muted">Nothing planned</li>}
                 </ul>
                 <AddMeal
-                  week={monday}
+                  week={weekStart}
                   day={day}
                   dayName={dayLabel(day)}
                   mode={mode}
@@ -417,7 +417,7 @@ export default async function PlanPage({
         </div>
 
         <div className="mt-6">
-          <ButtonLink href={`/shopping?w=${monday}`} size="lg" className="w-full sm:w-auto">
+          <ButtonLink href={`/shopping?w=${weekStart}`} size="lg" className="w-full sm:w-auto">
             <ShoppingCart aria-hidden className="size-5" /> Shopping list for {relation?.toLowerCase() ?? "this week"}
           </ButtonLink>
         </div>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { KIND_LABEL } from "@/lib/meal-kinds";
-import { addDays, hourET, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
+import { addDays, hourET, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { groceryFocus, shouldPlanNextWeek } from "@/lib/home-week";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
@@ -15,11 +15,11 @@ import { mainProtein } from "@/lib/protein";
 export default async function Home() {
   const { supabase, householdId, displayName } = await requireHousehold();
   const today = todayET();
-  const monday = mondayOf(today);
+  const weekStart = weekStartOf(today);
   const h = hourET();
   const greeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 
-  const nextMonday = addDays(monday, 7);
+  const nextWeekStart = addDays(weekStart, 7);
 
   const [{ data: hh }, { data: meals }, { data: weekRows }] = await Promise.all([
     supabase.from("households").select("default_protein_lbs, dinner_time").eq("id", householdId).single(),
@@ -34,10 +34,10 @@ export default async function Home() {
       .from("weeks")
       .select("id, week_start")
       .eq("household_id", householdId)
-      .in("week_start", [monday, nextMonday]),
+      .in("week_start", [weekStart, nextWeekStart]),
   ]);
   const weekId = (start: string) => (weekRows ?? []).find((w) => w.week_start === start)?.id;
-  const nextWeekId = weekId(nextMonday);
+  const nextWeekId = weekId(nextWeekStart);
   const ids = (weekRows ?? []).map((w) => w.id);
   const [{ data: items }, { count: nextDinners }] = await Promise.all([
     ids.length
@@ -58,10 +58,10 @@ export default async function Home() {
   const summary = (start: string) => {
     const id = weekId(start);
     const toOrder = (items ?? []).filter((i) => i.week_id === id && i.to_order);
-    return { monday: start, toOrder: toOrder.length, inCart: toOrder.filter((i) => i.sent_at).length };
+    return { weekStart: start, toOrder: toOrder.length, inCart: toOrder.filter((i) => i.sent_at).length };
   };
-  const groceries = groceryFocus([summary(monday), summary(nextMonday)]);
-  const groceryWeek = weekRelation(groceries.monday, monday) ?? "This week";
+  const groceries = groceryFocus([summary(weekStart), summary(nextWeekStart)]);
+  const groceryWeek = weekRelation(groceries.weekStart, weekStart) ?? "This week";
   const planNext = shouldPlanNextWeek(today, nextDinners ?? 0);
   const dow = (iso: string) =>
     new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
@@ -179,8 +179,8 @@ export default async function Home() {
             <p className="mt-2 text-lg">
               {nextDinners ? `Only ${nextDinners} dinner${nextDinners === 1 ? "" : "s"} planned so far.` : "Nothing is planned yet."}
             </p>
-            <p className="text-sm text-muted">{weekLabel(nextMonday)}</p>
-            <ButtonLink href={`/plan?w=${nextMonday}`} variant="primary" className="mt-3">
+            <p className="text-sm text-muted">{weekLabel(nextWeekStart)}</p>
+            <ButtonLink href={`/plan?w=${nextWeekStart}`} variant="primary" className="mt-3">
               <CalendarPlus aria-hidden className="size-4" /> Plan next week
             </ButtonLink>
           </Card>
@@ -191,7 +191,7 @@ export default async function Home() {
             <span id="groceries">Groceries</span>
           </SectionHeader>
           <p className="mt-1 text-sm text-muted">
-            {groceryWeek} · {weekLabel(groceries.monday)}
+            {groceryWeek} · {weekLabel(groceries.weekStart)}
           </p>
           {groceries.toOrder === 0 ? (
             <p className="mt-2 text-muted">No shopping list for this week yet.</p>
@@ -215,7 +215,7 @@ export default async function Home() {
               </div>
             </div>
           )}
-          <ButtonLink href={`/shopping?w=${groceries.monday}`} className="mt-3">
+          <ButtonLink href={`/shopping?w=${groceries.weekStart}`} className="mt-3">
             <ShoppingCart aria-hidden className="size-4" /> Open shopping list
           </ButtonLink>
         </Card>

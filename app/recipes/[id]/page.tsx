@@ -6,7 +6,7 @@ import { niceQty, proteinLbs, scaleFactor } from "@/lib/scale";
 import { formatIngredient, formatMinutes } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
-import { addDays, dayLabel, mondayOf, todayET } from "@/lib/dates";
+import { addDays, dayLabel, weekStartOf, todayET } from "@/lib/dates";
 import { ChefHat, Pencil, Tag, Trash2 } from "lucide-react";
 import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -73,7 +73,7 @@ export default async function RecipePage({
     .order("sort");
 
   const today = todayET();
-  const monday = mondayOf(today);
+  const weekStart = weekStartOf(today);
   const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
   const base = proteinLbs(list);
   const factor = scaleFactor(list, target);
@@ -105,7 +105,7 @@ export default async function RecipePage({
   const totalMin = (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0);
   const serves = Math.round(r.servings * factor);
   const weekDays = Array.from({ length: 14 }, (_, i) => {
-    const d = addDays(monday, i);
+    const d = addDays(weekStart, i);
     return { value: d, label: `${dayLabel(d)}${d === today ? " (today)" : ""}` };
   });
 

@@ -2,7 +2,7 @@ import { CATEGORIES } from "@/lib/categories";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
-import { mondayOf, todayET, weekLabel } from "@/lib/dates";
+import { weekStartOf, todayET, weekLabel } from "@/lib/dates";
 import { formatIngredient } from "@/lib/format";
 import { resetPicked } from "../actions";
 import { StoreList, type StoreItem } from "./store-list";
@@ -14,14 +14,14 @@ export const metadata: Metadata = { title: "In-store list" };
 
 export default async function StorePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
   const { w } = await searchParams;
-  const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
+  const weekStart = weekStartOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
   const { supabase, householdId } = await requireHousehold();
 
   const { data: week } = await supabase
     .from("weeks")
     .select("id")
     .eq("household_id", householdId)
-    .eq("week_start", monday)
+    .eq("week_start", weekStart)
     .maybeSingle();
   const { data: rows } = week
     ? await supabase
@@ -42,15 +42,15 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   return (
     <div className="mx-auto min-h-screen w-full max-w-xl bg-background px-4 pb-20">
       <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-2 backdrop-blur">
-        <ButtonLink href={`/shopping?w=${monday}`} size="sm">
+        <ButtonLink href={`/shopping?w=${weekStart}`} size="sm">
           <ArrowLeft aria-hidden className="size-4" /> Back
         </ButtonLink>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-bold">In-store list</h1>
-          <p className="text-xs text-muted tabular-nums">{weekLabel(monday)}</p>
+          <p className="text-xs text-muted tabular-nums">{weekLabel(weekStart)}</p>
         </div>
         <form action={resetPicked}>
-          <input type="hidden" name="week" value={monday} />
+          <input type="hidden" name="week" value={weekStart} />
           <SubmitButton variant="ghost" size="sm">
             Start over
           </SubmitButton>

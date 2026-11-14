@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { CATEGORIES } from "@/lib/categories";
-import { addDays, isPast, mondayOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
+import { addDays, isPast, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { addItem, deleteItem, generateList } from "./actions";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
@@ -33,8 +33,8 @@ export default async function ShoppingPage({
   searchParams: Promise<{ w?: string; kroger?: string; n?: string; zip?: string }>;
 }) {
   const { w, kroger, n, zip: zipParam } = await searchParams;
-  const monday = mondayOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
-  const relation = weekRelation(monday, mondayOf(todayET()));
+  const weekStart = weekStartOf(w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayET());
+  const relation = weekRelation(weekStart, weekStartOf(todayET()));
   const { supabase, householdId } = await requireHousehold();
 
   const [{ data: hh }, { data: conn }] = await Promise.all([
@@ -65,7 +65,7 @@ export default async function ShoppingPage({
     .from("weeks")
     .select("id")
     .eq("household_id", householdId)
-    .eq("week_start", monday)
+    .eq("week_start", weekStart)
     .maybeSingle();
 
   const [{ data: items }, { count: mealCount }] = week
@@ -153,28 +153,28 @@ export default async function ShoppingPage({
       <Nav />
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <IconLink href={`/shopping?w=${addDays(monday, -7)}`} label="Previous week">
+          <IconLink href={`/shopping?w=${addDays(weekStart, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />
           </IconLink>
-          <h1 className="text-xl font-bold tabular-nums">{weekLabel(monday)}</h1>
+          <h1 className="text-xl font-bold tabular-nums">{weekLabel(weekStart)}</h1>
           {relation && <Badge tone="info">{relation}</Badge>}
-          <IconLink href={`/shopping?w=${addDays(monday, 7)}`} label="Next week">
+          <IconLink href={`/shopping?w=${addDays(weekStart, 7)}`} label="Next week">
             <ChevronRight aria-hidden className="size-5" />
           </IconLink>
-          {monday !== mondayOf(todayET()) && (
+          {weekStart !== weekStartOf(todayET()) && (
             <ButtonLink href="/shopping" variant="ghost">
               This week
             </ButtonLink>
           )}
         </div>
 
-        <KrogerFlash status={kroger} n={n} week={monday} />
+        <KrogerFlash status={kroger} n={n} week={weekStart} />
         {connExpired && kroger !== "expired" && (
           <Notice
             tone="warning"
             className="mb-4"
             action={
-              <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="secondary" size="sm">
+              <ButtonAnchor href={`/api/kroger/connect?w=${weekStart}`} variant="secondary" size="sm">
                 Reconnect Kroger
               </ButtonAnchor>
             }
@@ -204,13 +204,13 @@ export default async function ShoppingPage({
           </dl>
           <div className="flex flex-wrap gap-2">
             <form action={generateList}>
-              <input type="hidden" name="week" value={monday} />
+              <input type="hidden" name="week" value={weekStart} />
               <SubmitButton variant={list.length ? "secondary" : "primary"}>
                 {list.length ? "Rebuild list" : "Build list from this week's meals"}
               </SubmitButton>
             </form>
             {list.length > 0 && (
-              <ButtonLink href={`/shopping/store?w=${monday}`}>In-store checklist</ButtonLink>
+              <ButtonLink href={`/shopping/store?w=${weekStart}`}>In-store checklist</ButtonLink>
             )}
           </div>
           {list.length > 0 && (
@@ -361,7 +361,7 @@ export default async function ShoppingPage({
             className="mb-5"
             action={
               (mealCount ?? 0) === 0 ? (
-                <ButtonLink href={`/plan?w=${monday}`} variant="primary">
+                <ButtonLink href={`/plan?w=${weekStart}`} variant="primary">
                   Plan this week
                 </ButtonLink>
               ) : undefined
@@ -375,7 +375,7 @@ export default async function ShoppingPage({
 
         {/* Add something by hand: just a name and Add. Amount, unit and aisle are optional. */}
         <form action={addItem} className={cardStyles("default", true, "mb-5 space-y-3 text-sm")}>
-          <input type="hidden" name="week" value={monday} />
+          <input type="hidden" name="week" value={weekStart} />
           <div className="flex gap-2">
             <Input
               name="name"
@@ -415,7 +415,7 @@ export default async function ShoppingPage({
             <h2 className="font-semibold">Kroger</h2>
             <Badge tone={conn ? "success" : "neutral"}>{conn ? "connected" : "not connected"}</Badge>
             <span className="flex-1" />
-            <ButtonAnchor href={`/api/kroger/connect?w=${monday}`} variant="ghost" size="sm">
+            <ButtonAnchor href={`/api/kroger/connect?w=${weekStart}`} variant="ghost" size="sm">
               {conn ? "Reconnect" : "Connect"}
             </ButtonAnchor>
           </div>
@@ -436,7 +436,7 @@ export default async function ShoppingPage({
             <div>
               <p className="mb-2 text-muted">Pick your store so we can find real products and prices.</p>
               <form className="mb-2 flex items-center gap-2">
-                <input type="hidden" name="w" value={monday} />
+                <input type="hidden" name="w" value={weekStart} />
                 <label htmlFor="zip">Stores near</label>
                 <Input id="zip" name="zip" defaultValue={zip} inputMode="numeric" maxLength={5} placeholder="ZIP" className="w-28" />
                 <Button type="submit">Search</Button>
@@ -470,7 +470,7 @@ export default async function ShoppingPage({
             <div className="flex flex-wrap gap-2">
               {list.length > 0 && (
                 <form action={matchItems}>
-                  <input type="hidden" name="week" value={monday} />
+                  <input type="hidden" name="week" value={weekStart} />
                   <SubmitButton>Match items</SubmitButton>
                 </form>
               )}
@@ -480,7 +480,7 @@ export default async function ShoppingPage({
               {/* On a computer the send button lives here; on a phone it's the bar at the bottom. */}
               {sendable.length > 0 && conn && (
                 <form action={sendToCart} className="hidden md:block">
-                  <input type="hidden" name="week" value={monday} />
+                  <input type="hidden" name="week" value={weekStart} />
                   <SubmitButton variant="primary">{sendLabel}</SubmitButton>
                 </form>
               )}
@@ -497,7 +497,7 @@ export default async function ShoppingPage({
         >
           {!conn ? (
             <ButtonAnchor
-              href={`/api/kroger/connect?w=${monday}`}
+              href={`/api/kroger/connect?w=${weekStart}`}
               variant="primary"
               size="lg"
               className="w-full"
@@ -506,14 +506,14 @@ export default async function ShoppingPage({
             </ButtonAnchor>
           ) : matchedCount === 0 ? (
             <form action={matchItems}>
-              <input type="hidden" name="week" value={monday} />
+              <input type="hidden" name="week" value={weekStart} />
               <SubmitButton variant="primary" size="lg" className="w-full">
                 Match items first
               </SubmitButton>
             </form>
           ) : sendable.length > 0 ? (
             <form action={sendToCart}>
-              <input type="hidden" name="week" value={monday} />
+              <input type="hidden" name="week" value={weekStart} />
               <SubmitButton variant="primary" size="lg" className="w-full">
                 {sendLabel}
               </SubmitButton>

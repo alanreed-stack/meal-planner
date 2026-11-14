@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
-import { addDays, mondayOf } from "@/lib/dates";
+import { addDays, weekStartOf } from "@/lib/dates";
 
 async function ensureWeek(weekStart: string) {
   const { supabase, householdId } = await requireHousehold();
@@ -34,13 +34,13 @@ export async function setMode(formData: FormData) {
 const SLOTS = ["breakfast", "lunch", "dinner"];
 const KINDS = ["leftovers", "out", "quick"];
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
-const inWeek = (monday: string, day: string) => isDate(day) && day >= monday && day <= addDays(monday, 6);
+const inWeek = (start: string, day: string) => isDate(day) && day >= start && day <= addDays(start, 6);
 
 /** Adds a recipe to a day, or marks the day as leftovers / eating out / a quick night (kind). */
 export async function addMeal(formData: FormData) {
   const day = String(formData.get("day"));
   // From a recipe page ("go") only the day is chosen, so the week follows from it.
-  const weekStart = formData.get("go") && isDate(day) ? mondayOf(day) : String(formData.get("week"));
+  const weekStart = formData.get("go") && isDate(day) ? weekStartOf(day) : String(formData.get("week"));
   const slot = SLOTS.includes(String(formData.get("slot"))) ? String(formData.get("slot")) : "dinner";
   const recipeId = String(formData.get("recipe_id") ?? "");
   const kindRaw = String(formData.get("kind") ?? "");
@@ -74,8 +74,8 @@ export async function moveMeal(formData: FormData) {
     .select("id, weeks(week_start)")
     .eq("id", String(formData.get("id")))
     .maybeSingle();
-  const monday = meal?.weeks?.week_start;
-  if (!meal || !monday || !inWeek(monday, day)) return;
+  const start = meal?.weeks?.week_start;
+  if (!meal || !start || !inWeek(start, day)) return;
   await supabase.from("planned_meals").update({ day }).eq("id", meal.id);
   revalidatePath("/plan");
 }

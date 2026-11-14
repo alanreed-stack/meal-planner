@@ -12,11 +12,11 @@ export type Cand = {
 };
 
 export type FillInput = {
-  days: string[]; // every day of the week, Monday first
+  days: string[]; // every day of the week, in order
   existing: Record<string, { id: string | null; protein: string | null }>; // dinners already planned
   cands: Cand[];
   mode: "home" | "travel";
-  monday: string;
+  weekStart: string;
 };
 
 const DAY_MS = 86_400_000;
@@ -26,7 +26,7 @@ const daysBetween = (a: string, b: string) =>
 function eligible(c: Cand, input: FillInput, minGapDays: number): boolean {
   if (input.mode === "home" && c.diet === "family") return false; // would need a keto plate too
   if (input.mode === "travel" && c.diet === "keto") return false;
-  if (c.lastDay && daysBetween(input.monday, c.lastDay) < minGapDays) return false;
+  if (c.lastDay && daysBetween(input.weekStart, c.lastDay) < minGapDays) return false;
   return true;
 }
 

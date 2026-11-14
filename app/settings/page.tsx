@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LogOut, Plus, X } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
-import { mondayOf, todayET } from "@/lib/dates";
+import { weekStartOf, todayET } from "@/lib/dates";
 import { signOut } from "@/lib/sign-out";
 import { Badge } from "@/components/ui/badge";
 import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default async function SettingsPage() {
     .order("name");
 
   const { data: conn } = await supabase.from("kroger_connections").select("user_id").maybeSingle();
-  const monday = mondayOf(todayET());
+  const weekStart = weekStartOf(todayET());
 
   return (
     <>
@@ -151,7 +151,7 @@ export default async function SettingsPage() {
             {hh?.kroger_location_id ? hh.kroger_store_name : "none chosen yet"}
           </p>
           <div className="flex flex-wrap gap-2">
-            <ButtonAnchor href={`/api/kroger/connect?w=${monday}`}>{conn ? "Reconnect Kroger" : "Connect Kroger"}</ButtonAnchor>
+            <ButtonAnchor href={`/api/kroger/connect?w=${weekStart}`}>{conn ? "Reconnect Kroger" : "Connect Kroger"}</ButtonAnchor>
             <ButtonLink href="/shopping#kroger">{hh?.kroger_location_id ? "Change store" : "Choose a store"}</ButtonLink>
           </div>
         </Card>

@@ -1,12 +1,12 @@
 // Small decisions the Home page makes about which week to talk about.
-import { isWeekendDay } from "./dates";
+import { isPlanningDay } from "./dates";
 
-/** From Saturday on, nudge to plan next week when it has fewer than three dinners. */
+/** On the last two days of the week (Friday and Saturday), nudge to plan next week when it has fewer than three dinners. */
 export function shouldPlanNextWeek(today: string, nextWeekDinners: number): boolean {
-  return isWeekendDay(today) && nextWeekDinners < 3;
+  return isPlanningDay(today) && nextWeekDinners < 3;
 }
 
-export type GroceryWeek = { monday: string; toOrder: number; inCart: number };
+export type GroceryWeek = { weekStart: string; toOrder: number; inCart: number };
 
 /**
  * Which week the Groceries card should show: the first one (this week, then next) that still has something to

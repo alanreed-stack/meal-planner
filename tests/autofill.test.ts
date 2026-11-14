@@ -12,9 +12,9 @@ function seeded(seed: number) {
   };
 }
 
-const monday = "2026-11-09";
+const weekStart = "2026-11-08";
 const days = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date(Date.parse(monday + "T00:00:00Z") + i * 86_400_000);
+  const d = new Date(Date.parse(weekStart + "T00:00:00Z") + i * 86_400_000);
   return d.toISOString().slice(0, 10);
 });
 
@@ -37,7 +37,7 @@ const input = (cands: Cand[], over: Partial<FillInput> = {}): FillInput => ({
   existing: {},
   cands,
   mode: "home",
-  monday,
+  weekStart,
   ...over,
 });
 
