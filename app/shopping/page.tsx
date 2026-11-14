@@ -3,7 +3,8 @@ import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { CATEGORIES } from "@/lib/categories";
 import { addDays, isPast, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
-import { addItem, deleteItem, generateList } from "./actions";
+import { addItem, deleteItem } from "./actions";
+import { BuildListForm } from "./build-list";
 import { clearStore, matchItems, sendToCart, setQty, setStore } from "./kroger-actions";
 import { searchStores, type Store } from "@/lib/kroger";
 import { formatAmount, formatIngredient } from "@/lib/format";
@@ -63,10 +64,15 @@ export default async function ShoppingPage({
 
   const { data: week } = await supabase
     .from("weeks")
-    .select("id")
+    .select("id, plan_changed_at, list_built_at")
     .eq("household_id", householdId)
     .eq("week_start", weekStart)
     .maybeSingle();
+  // The plan changed after the list was built, so the list may be missing things or have too much.
+  const planChanged =
+    !!week?.list_built_at &&
+    !!week.plan_changed_at &&
+    Date.parse(week.plan_changed_at) > Date.parse(week.list_built_at);
 
   const [{ data: items }, { count: mealCount }] = week
     ? await Promise.all([
@@ -183,6 +189,20 @@ export default async function ShoppingPage({
           </Notice>
         )}
 
+        {planChanged && (
+          <Notice
+            tone="warning"
+            className="mb-4"
+            action={
+              <BuildListForm week={weekStart} variant="primary">
+                Update list
+              </BuildListForm>
+            }
+          >
+            Your plan changed since this list was built.
+          </Notice>
+        )}
+
         {/* 1. The week at a glance, and the one button that builds the list. */}
         <Card as="section" className="mb-5 space-y-4">
           <dl className="grid grid-cols-3 gap-2 text-center">
@@ -203,12 +223,9 @@ export default async function ShoppingPage({
             </div>
           </dl>
           <div className="flex flex-wrap gap-2">
-            <form action={generateList}>
-              <input type="hidden" name="week" value={weekStart} />
-              <SubmitButton variant={list.length ? "secondary" : "primary"}>
-                {list.length ? "Rebuild list" : "Build list from this week's meals"}
-              </SubmitButton>
-            </form>
+            <BuildListForm week={weekStart} variant={list.length ? "secondary" : "primary"}>
+              {list.length ? "Rebuild list" : "Build list from this week's meals"}
+            </BuildListForm>
             {list.length > 0 && (
               <ButtonLink href={`/shopping/store?w=${weekStart}`}>In-store checklist</ButtonLink>
             )}

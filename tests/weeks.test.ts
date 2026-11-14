@@ -76,3 +76,24 @@ describe("groceryFocus", () => {
     expect(groceryFocus([w("a", 0, 0), w("b", 0, 0)]).weekStart).toBe("a");
   });
 });
+
+import { describeBuild } from "@/lib/build-summary";
+
+describe("describeBuild (the message after building a list)", () => {
+  const r = (over: Partial<Parameters<typeof describeBuild>[0]> = {}) =>
+    describeBuild({ added: 0, removed: 0, changed: 0, matched: 0, empty: false, ...over });
+  it("says what was added and removed", () => {
+    expect(r({ added: 6, removed: 2 })).toBe("Added 6 items, removed 2.");
+    expect(r({ added: 1 })).toBe("Added 1 item.");
+  });
+  it("mentions changed amounts and new Kroger matches", () => {
+    expect(r({ changed: 3, matched: 5 })).toBe("3 amounts changed. Found Kroger products for 5.");
+    expect(r({ changed: 1 })).toBe("1 amount changed.");
+  });
+  it("says so when nothing changed", () => {
+    expect(r()).toBe("No changes, the list was already up to date.");
+  });
+  it("explains an empty plan", () => {
+    expect(r({ empty: true })).toBe("Nothing to list yet. Plan some recipes first.");
+  });
+});

@@ -6,13 +6,18 @@ import { niceQty, scaleFactor } from "@/lib/scale";
 import { packagesNeeded } from "@/lib/packaging";
 import { guessAisle } from "@/lib/ingredients";
 import { splitOptions } from "@/lib/match";
+import type { BuildSummary } from "@/lib/build-summary";
 import { carryOver } from "@/lib/cart-carry";
+import { matchWeekItems } from "@/lib/match-items";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
  *  Items you added by hand are kept. Merges the same ingredient+unit across recipes. */
-export async function generateList(formData: FormData) {
+export async function generateList(formData: FormData): Promise<BuildSummary> {
+  // Stamped before anything is read, so a plan change made while this runs still shows as "changed since built".
+  const startedAt = new Date().toISOString();
   const weekStart = String(formData.get("week"));
   const { supabase, householdId } = await requireHousehold();
+  const none: BuildSummary = { added: 0, removed: 0, changed: 0, matched: 0, empty: true };
 
   const { data: week } = await supabase
     .from("weeks")
@@ -20,7 +25,7 @@ export async function generateList(formData: FormData) {
     .eq("household_id", householdId)
     .eq("week_start", weekStart)
     .maybeSingle();
-  if (!week) return;
+  if (!week) return none;
 
   const { data: meals } = await supabase
     .from("planned_meals")
@@ -29,7 +34,7 @@ export async function generateList(formData: FormData) {
   const recipeIds = [...new Set((meals ?? []).map((m) => m.recipe_id).filter(Boolean) as string[])];
   const { data: hh } = await supabase
     .from("households")
-    .select("default_protein_lbs")
+    .select("default_protein_lbs, kroger_location_id")
     .eq("id", householdId)
     .single();
   const defaultLbs = Number(hh?.default_protein_lbs ?? 2);
@@ -37,7 +42,7 @@ export async function generateList(formData: FormData) {
   // Keep the checkbox choices, and what is already in the Kroger cart, for items that survive regeneration.
   const { data: old } = await supabase
     .from("shopping_items")
-    .select("name, unit, to_order, picked, kroger_upc, sent_at, sent_qty, order_qty")
+    .select("name, unit, qty, to_order, picked, kroger_upc, sent_at, sent_qty, order_qty")
     .eq("week_id", week.id)
     .eq("manual", false);
   const key = (name: string, unit: string | null) =>
@@ -107,6 +112,16 @@ export async function generateList(formData: FormData) {
     .eq("household_id", householdId);
   const savedBy = new Map((saved ?? []).map((m) => [m.name_key, m]));
 
+  // What this rebuild changes, for the message afterwards.
+  let added = 0;
+  let changed = 0;
+  for (const [k, v] of merged) {
+    const o = oldBy.get(k);
+    if (!o) added++;
+    else if (Math.abs(Number(o.qty ?? 0) - niceQty(v.qty ?? 0, v.unit)) > 0.01) changed++;
+  }
+  const removed = [...oldBy.keys()].filter((k) => !merged.has(k)).length;
+
   await supabase.from("shopping_items").delete().eq("week_id", week.id).eq("manual", false);
   if (merged.size) {
     const { error } = await supabase.from("shopping_items").insert(
@@ -143,7 +158,15 @@ export async function generateList(formData: FormData) {
     );
     if (error) throw error;
   }
+  await supabase.from("weeks").update({ list_built_at: startedAt }).eq("id", week.id);
+
+  // With a store chosen, find Kroger products for the new items right away.
+  let matched = 0;
+  if (hh?.kroger_location_id && merged.size) {
+    matched = await matchWeekItems(supabase, householdId, hh.kroger_location_id, week.id);
+  }
   revalidatePath("/shopping");
+  return { added, removed, changed, matched, empty: merged.size === 0 };
 }
 
 export async function toggleItem(formData: FormData) {

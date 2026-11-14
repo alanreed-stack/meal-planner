@@ -452,9 +452,33 @@ export type Database = {
         ];
       };
       weeks: {
-        Row: { created_at: string; household_id: string; id: string; mode: string; week_start: string };
-        Insert: { created_at?: string; household_id: string; id?: string; mode?: string; week_start: string };
-        Update: { created_at?: string; household_id?: string; id?: string; mode?: string; week_start?: string };
+        Row: {
+          created_at: string;
+          household_id: string;
+          id: string;
+          list_built_at: string | null;
+          mode: string;
+          plan_changed_at: string | null;
+          week_start: string;
+        };
+        Insert: {
+          created_at?: string;
+          household_id: string;
+          id?: string;
+          list_built_at?: string | null;
+          mode?: string;
+          plan_changed_at?: string | null;
+          week_start: string;
+        };
+        Update: {
+          created_at?: string;
+          household_id?: string;
+          id?: string;
+          list_built_at?: string | null;
+          mode?: string;
+          plan_changed_at?: string | null;
+          week_start?: string;
+        };
         Relationships: [
           {
             foreignKeyName: "weeks_household_id_fkey";

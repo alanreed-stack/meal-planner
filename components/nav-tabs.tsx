@@ -26,24 +26,29 @@ const onWeekPage = (path: string) => [...WEEK_TABS].some((t) => isActive(path, t
 const validWeek = (w: string | null) => (w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : null);
 
 /** Links along the top on a computer, a tab bar along the bottom on a phone. */
-export function NavTabs() {
+export function NavTabs({ staleWeek = null }: { staleWeek?: string | null }) {
   // useSearchParams needs a Suspense boundary. Until it resolves the tabs simply point at the current week.
   return (
-    <Suspense fallback={<Tabs week={null} />}>
-      <TabsWithWeek />
+    <Suspense fallback={<Tabs week={null} staleWeek={staleWeek} />}>
+      <TabsWithWeek staleWeek={staleWeek} />
     </Suspense>
   );
 }
 
-function TabsWithWeek() {
+function TabsWithWeek({ staleWeek }: { staleWeek: string | null }) {
   const path = usePathname();
   const w = useSearchParams().get("w");
-  return <Tabs week={onWeekPage(path) ? validWeek(w) : null} />;
+  return <Tabs week={onWeekPage(path) ? validWeek(w) : null} staleWeek={staleWeek} />;
 }
 
-function Tabs({ week }: { week: string | null }) {
+function Tabs({ week, staleWeek }: { week: string | null; staleWeek: string | null }) {
   const path = usePathname();
-  const to = (href: string) => (week && WEEK_TABS.has(href) ? `${href}?w=${week}` : href);
+  // A list that needs updating is flagged on the Shopping tab, and the tab opens that week unless you are already on one.
+  const to = (href: string) => {
+    const w = week ?? (href === "/shopping" ? staleWeek : null);
+    return w && WEEK_TABS.has(href) ? `${href}?w=${w}` : href;
+  };
+  const dot = (href: string) => href === "/shopping" && !!staleWeek;
   return (
     <>
       <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -61,6 +66,7 @@ function Tabs({ week }: { week: string | null }) {
               )}
             >
               {label}
+              {dot(href) && <StaleDot />}
             </Link>
           );
         })}
@@ -90,7 +96,10 @@ function Tabs({ week }: { week: string | null }) {
                     aria-hidden
                     className={cn("absolute top-0 h-0.5 w-8 rounded-full", on ? "bg-primary" : "bg-transparent")}
                   />
-                  <Icon aria-hidden className="size-6" strokeWidth={on ? 2.4 : 2} />
+                  <span className="relative">
+                    <Icon aria-hidden className="size-6" strokeWidth={on ? 2.4 : 2} />
+                    {dot(href) && <StaleDot className="absolute -top-0.5 -right-1" />}
+                  </span>
                   {label}
                 </Link>
               </li>
@@ -98,6 +107,16 @@ function Tabs({ week }: { week: string | null }) {
           })}
         </ul>
       </nav>
+    </>
+  );
+}
+
+/** A small dot meaning "this list needs updating", with a text version for screen readers. */
+function StaleDot({ className }: { className?: string }) {
+  return (
+    <>
+      <span aria-hidden className={cn("ml-1 inline-block size-2.5 rounded-full bg-warning", className)} />
+      <span className="sr-only">, the list needs updating</span>
     </>
   );
 }

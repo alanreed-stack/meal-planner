@@ -3,62 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
-import { addToCart, KrogerError, refreshToken, searchProducts } from "@/lib/kroger";
-import { pickProduct } from "@/lib/match";
+import { addToCart, KrogerError, refreshToken } from "@/lib/kroger";
+import { matchWeekItems, recalcQuantities, rememberMatch } from "@/lib/match-items";
 import { packagesNeeded } from "@/lib/packaging";
 
 const keyOf = (name: string) => name.trim().toLowerCase();
-
-type Db = Awaited<ReturnType<typeof requireHousehold>>["supabase"];
-
-async function remember(
-  supabase: Db,
-  householdId: string,
-  name: string,
-  m: {
-    upc: string;
-    product_id: string;
-    description: string;
-    size: string | null;
-    price: number | null;
-    confidence: "ok" | "low";
-    resetQty?: boolean;
-  }
-) {
-  await supabase.from("kroger_matches").upsert({
-    household_id: householdId,
-    name_key: keyOf(name),
-    upc: m.upc,
-    product_id: m.product_id,
-    description: m.description,
-    size: m.size,
-    price: m.price,
-    confidence: m.confidence,
-    // A different product has a different package size, so an old override no longer applies.
-    ...(m.resetQty ? { qty_override: null } : {}),
-    updated_at: new Date().toISOString(),
-  });
-}
-
-/** Re-works packages to buy for matched items you haven't set by hand. */
-async function recalcQuantities(supabase: Db, weekId: string) {
-  const { data: items } = await supabase
-    .from("shopping_items")
-    .select("id, name, qty, unit, kroger_size, order_qty, order_qty_manual")
-    .eq("week_id", weekId)
-    .eq("to_order", true)
-    .eq("order_qty_manual", false)
-    .not("kroger_upc", "is", null);
-  for (const it of items ?? []) {
-    const { packs } = packagesNeeded(
-      { qty: it.qty == null ? null : Number(it.qty), unit: it.unit, name: it.name },
-      it.kroger_size
-    );
-    if (packs !== it.order_qty) {
-      await supabase.from("shopping_items").update({ order_qty: packs }).eq("id", it.id);
-    }
-  }
-}
 
 async function storeId() {
   const ctx = await requireHousehold();
@@ -107,57 +56,7 @@ export async function matchItems(formData: FormData) {
     .maybeSingle();
   if (!week) return;
 
-  const { data: items } = await supabase
-    .from("shopping_items")
-    .select("id, name, qty, unit, category, order_qty_manual")
-    .eq("week_id", week.id)
-    .eq("to_order", true)
-    .is("kroger_upc", null);
-
-  const todo = items ?? [];
-  for (let i = 0; i < todo.length; i += 4) {
-    await Promise.all(
-      todo.slice(i, i + 4).map(async (item) => {
-        try {
-          const pick = await pickProduct(item.name, item.category, (term) =>
-            searchProducts(term.replace(/[()]/g, " "), locationId, 10)
-          );
-          if (!pick) return;
-          const p = pick.product;
-          const description = [p.brand, p.description, p.size].filter(Boolean).join(" · ");
-          const { packs } = packagesNeeded(
-            { qty: item.qty == null ? null : Number(item.qty), unit: item.unit, name: item.name },
-            p.size
-          );
-          await supabase
-            .from("shopping_items")
-            .update({
-              kroger_upc: p.upc,
-              kroger_product_id: p.productId,
-              kroger_description: description,
-              kroger_size: p.size || null,
-              kroger_price: p.price,
-              match_confidence: pick.confidence,
-              ...(item.order_qty_manual ? {} : { order_qty: packs }),
-              sent_at: null,
-              sent_qty: 0,
-            })
-            .eq("id", item.id);
-          await remember(supabase, householdId, item.name, {
-            upc: p.upc,
-            product_id: p.productId,
-            description,
-            size: p.size || null,
-            price: p.price,
-            confidence: pick.confidence,
-          });
-        } catch {
-          // leave unmatched; the user can search by hand
-        }
-      })
-    );
-  }
-  await recalcQuantities(supabase, week.id);
+  await matchWeekItems(supabase, householdId, locationId, week.id);
   revalidatePath("/shopping");
 }
 
@@ -177,7 +76,7 @@ export async function chooseProduct(formData: FormData) {
     .single();
   const weekStart = it?.weeks?.week_start;
   if (it) {
-    await remember(supabase, householdId, it.name, {
+    await rememberMatch(supabase, householdId, it.name, {
       upc,
       product_id: productId,
       description,

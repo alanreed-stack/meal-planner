@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 /** Returns the signed-in user's household, or sends them to /setup. */
-export async function requireHousehold() {
+export const requireHousehold = cache(async function requireHousehold() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,4 +28,4 @@ export async function requireHousehold() {
     householdName: h?.name ?? "Our Family",
     inviteCode: h?.invite_code ?? "",
   };
-}
+});

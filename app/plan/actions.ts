@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
-import { addDays, weekStartOf } from "@/lib/dates";
+import { addDays, todayET, weekStartOf } from "@/lib/dates";
+
+type Db = Awaited<ReturnType<typeof requireHousehold>>["supabase"];
+
+/** Notes that the plan changed in a way that can change the shopping list ("your plan changed since this list was built"). */
+async function touchPlan(supabase: Db, weekId: string) {
+  await supabase.from("weeks").update({ plan_changed_at: new Date().toISOString() }).eq("id", weekId);
+}
 
 async function ensureWeek(weekStart: string) {
   const { supabase, householdId } = await requireHousehold();
@@ -62,6 +69,7 @@ export async function addMeal(formData: FormData) {
     kind,
     recipe_id: kind === "recipe" ? recipeId : null,
   });
+  if (kind === "recipe") await touchPlan(supabase, week.id);
   revalidatePath("/plan");
   if (formData.get("go")) redirect(`/plan?w=${weekStart}`);
 }
@@ -112,13 +120,19 @@ export async function keepFill(formData: FormData) {
       kind: "recipe",
       recipe_id: p.recipe_id,
     }));
-  if (rows.length) await supabase.from("planned_meals").insert(rows);
+  if (rows.length) {
+    await supabase.from("planned_meals").insert(rows);
+    await touchPlan(supabase, week.id);
+  }
   revalidatePath("/plan");
 }
 
 export async function removeMeal(formData: FormData) {
   const { supabase } = await requireHousehold();
-  await supabase.from("planned_meals").delete().eq("id", String(formData.get("id")));
+  const id = String(formData.get("id"));
+  const { data: meal } = await supabase.from("planned_meals").select("week_id, recipe_id").eq("id", id).maybeSingle();
+  await supabase.from("planned_meals").delete().eq("id", id);
+  if (meal?.recipe_id) await touchPlan(supabase, meal.week_id);
   revalidatePath("/plan");
 }
 
@@ -156,6 +170,7 @@ export async function copyLastWeek(formData: FormData): Promise<{ copied: number
       protein_lbs: m.protein_lbs,
     }))
   );
+  if (toCopy.some((m) => m.recipe_id)) await touchPlan(supabase, week.id);
   // Only take over last week's home/travel setting when this week had nothing planned yet.
   if (!taken?.length) await supabase.from("weeks").update({ mode: prev.mode }).eq("id", week.id);
   revalidatePath("/plan");
@@ -168,10 +183,13 @@ export async function setMealProtein(formData: FormData) {
   const raw = String(formData.get("lbs") ?? "").trim();
   const n = Number(raw);
   const lbs = raw === "" ? null : Number.isFinite(n) ? Math.min(10, Math.max(0.5, n)) : null;
-  await supabase
+  const { data: meal } = await supabase
     .from("planned_meals")
     .update({ protein_lbs: lbs })
-    .eq("id", String(formData.get("id")));
+    .eq("id", String(formData.get("id")))
+    .select("week_id, recipe_id")
+    .maybeSingle();
+  if (meal?.recipe_id) await touchPlan(supabase, meal.week_id);
   revalidatePath("/plan");
 }
 
@@ -203,8 +221,21 @@ export async function savePlanSettings(formData: FormData) {
   }
   const t = String(formData.get("time") ?? "");
   if (/^\d{2}:\d{2}$/.test(t)) update.dinner_time = t;
+  const { data: before } = await supabase
+    .from("households")
+    .select("default_protein_lbs")
+    .eq("id", householdId)
+    .single();
   if (Object.keys(update).length) {
     await supabase.from("households").update(update).eq("id", householdId);
+  }
+  // A new usual meat weight changes the amounts on every upcoming list.
+  if (update.default_protein_lbs !== undefined && Number(before?.default_protein_lbs) !== update.default_protein_lbs) {
+    await supabase
+      .from("weeks")
+      .update({ plan_changed_at: new Date().toISOString() })
+      .eq("household_id", householdId)
+      .gte("week_start", weekStartOf(todayET()));
   }
   revalidatePath("/plan");
   revalidatePath("/settings");
