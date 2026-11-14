@@ -14,10 +14,13 @@ export function Menu({
   label,
   title,
   icon,
+  align = "right",
   children,
 }: {
   label: string;
   title?: string;
+  /** Which edge of the button the popover lines up with on a computer. Use "left" near the left edge of the page. */
+  align?: "left" | "right";
   /** Replaces the default ⋯ icon. */
   icon?: ReactNode;
   children: ReactNode;
@@ -75,7 +78,7 @@ export function Menu({
           <div
             role="dialog"
             aria-label={title ?? label}
-            className="absolute right-0 z-30 mt-1 w-72 rounded-md border border-border bg-surface p-3 shadow-lg"
+            className={`absolute ${align === "left" ? "left-0" : "right-0"} z-30 mt-1 w-72 rounded-md border border-border bg-surface p-3 shadow-lg`}
           >
             {body}
           </div>

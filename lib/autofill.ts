@@ -114,3 +114,28 @@ export function reshuffleDay(
   const next = chooseFor(day, input, chosen, new Set(current ? [current.id] : []), rng);
   return next ?? current ?? null;
 }
+
+/** A small seeded random generator, so suggestions for the same day come out the same on the server and in the browser. */
+export function seededRng(seed: string): () => number {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Up to `n` different ideas for one day, using the same rules as "fill the week". */
+export function suggestFor(input: FillInput, day: string, n = 4, rng: () => number = Math.random): Cand[] {
+  const out: Cand[] = [];
+  const exclude = new Set<string>();
+  for (let i = 0; i < n; i++) {
+    const c = chooseFor(day, input, {}, exclude, rng);
+    if (!c) break;
+    out.push(c);
+    exclude.add(c.id);
+  }
+  return out;
+}

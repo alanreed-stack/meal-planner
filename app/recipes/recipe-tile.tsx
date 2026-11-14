@@ -18,19 +18,22 @@ export function RecipeTile({
   protein,
   className,
   compact = false,
+  size = "sm",
 }: {
   protein: string;
   className?: string;
   /** A small square for list rows. */
   compact?: boolean;
+  /** For the compact square: 40px or 56px. */
+  size?: "sm" | "md";
 }) {
   const { Icon, tone } = LOOK[protein] ?? LOOK.none;
   return (
     <div
       aria-hidden
-      className={cn("flex items-center justify-center", compact ? "size-10 shrink-0 rounded-md" : "h-36 w-full", tone, className)}
+      className={cn("flex items-center justify-center", compact ? (size === "md" ? "size-14 shrink-0 rounded-md" : "size-10 shrink-0 rounded-md") : "h-36 w-full", tone, className)}
     >
-      <Icon aria-hidden className={cn("opacity-60", compact ? "size-5" : "size-14")} />
+      <Icon aria-hidden className={cn("opacity-60", compact ? (size === "md" ? "size-7" : "size-5") : "size-14")} />
     </div>
   );
 }

@@ -75,18 +75,75 @@ export async function addMeal(formData: FormData) {
   if (formData.get("go")) redirect(`/plan?w=${weekStart}`);
 }
 
-export async function moveMeal(formData: FormData) {
+export type MoveResult = { ok: boolean; fromDay: string; swappedWith: string | null };
+
+/**
+ * Moves a meal to any day, this week or another. If that day already has something in the same meal slot,
+ * the two swap places. Moving back to `fromDay` undoes it (a swap swaps again).
+ */
+export async function moveMealTo(id: string, day: string): Promise<MoveResult> {
+  const fail: MoveResult = { ok: false, fromDay: "", swappedWith: null };
+  if (!isDate(day)) return fail;
   const { supabase } = await requireHousehold();
-  const day = String(formData.get("day"));
   const { data: meal } = await supabase
     .from("planned_meals")
-    .select("id, weeks(week_start)")
-    .eq("id", String(formData.get("id")))
+    .select("id, week_id, day, slot, recipe_id, weeks(week_start)")
+    .eq("id", id)
     .maybeSingle();
-  const start = meal?.weeks?.week_start;
-  if (!meal || !start || !inWeek(start, day)) return;
-  await supabase.from("planned_meals").update({ day }).eq("id", meal.id);
+  const fromStart = meal?.weeks?.week_start;
+  if (!meal || !fromStart) return fail;
+  if (meal.day === day) return { ok: true, fromDay: meal.day, swappedWith: null };
+
+  const toStart = weekStartOf(day);
+  const target = toStart === fromStart ? { id: meal.week_id } : await ensureWeek(toStart).then((w) => w.week);
+
+  const { data: occupant } = await supabase
+    .from("planned_meals")
+    .select("id, recipe_id")
+    .eq("week_id", target.id)
+    .eq("day", day)
+    .eq("slot", meal.slot)
+    .neq("id", meal.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (occupant) {
+    await supabase.from("planned_meals").update({ day: meal.day, week_id: meal.week_id }).eq("id", occupant.id);
+  }
+  await supabase.from("planned_meals").update({ day, week_id: target.id }).eq("id", meal.id);
+
+  // Moving within a week does not change what to buy. Moving between weeks does, for both weeks.
+  if (target.id !== meal.week_id) {
+    if (meal.recipe_id || occupant?.recipe_id) {
+      await touchPlan(supabase, meal.week_id);
+      await touchPlan(supabase, target.id);
+    }
+  }
   revalidatePath("/plan");
+  revalidatePath("/");
+  return { ok: true, fromDay: meal.day, swappedWith: occupant?.id ?? null };
+}
+
+/** The "Move to" menu: the same move, from a form. */
+export async function moveMeal(formData: FormData) {
+  await moveMealTo(String(formData.get("id")), String(formData.get("day")));
+}
+
+/** Puts a different recipe in a planned meal (the "Swap for something else" button, and its Undo). */
+export async function replaceMeal(id: string, recipeId: string, lbs: number | null) {
+  const { supabase } = await requireHousehold();
+  // Row-level security only shows this household's recipes, so a foreign id comes back empty.
+  const { data: ok } = await supabase.from("recipes").select("id").eq("id", recipeId).maybeSingle();
+  if (!ok) return;
+  const { data: meal } = await supabase
+    .from("planned_meals")
+    .update({ recipe_id: recipeId, protein_lbs: lbs })
+    .eq("id", id)
+    .select("week_id")
+    .maybeSingle();
+  if (meal) await touchPlan(supabase, meal.week_id);
+  revalidatePath("/plan");
+  revalidatePath("/");
 }
 
 /** Saves the previewed fill: one dinner per empty day. Nothing is written until this runs. */
