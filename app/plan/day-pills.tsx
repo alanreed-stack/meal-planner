@@ -29,7 +29,6 @@ export function DayPills({
             <li key={d}>
               <a
                 href={`#day-${d}`}
-                aria-label={`${date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })}${isToday ? ", today" : ""}${has ? ", dinner planned" : ""}`}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center rounded-md border text-xs",
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
@@ -38,6 +37,10 @@ export function DayPills({
               >
                 <span>{dow}</span>
                 <span className="text-base leading-none tabular-nums">{num}</span>
+                <span className="sr-only">
+                  {isToday ? ", today" : ""}
+                  {has ? ", dinner planned" : ""}
+                </span>
                 <span
                   aria-hidden
                   className={cn("mt-1 size-1.5 rounded-full", has ? (isToday ? "bg-primary-ink" : "bg-primary") : "bg-transparent")}

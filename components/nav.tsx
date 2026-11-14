@@ -29,7 +29,14 @@ async function staleListWeek(): Promise<string | null> {
 export async function Nav() {
   const staleWeek = await staleListWeek();
   return (
-    <header className="border-b border-border bg-surface">
+    <>
+      <a
+        href="#main"
+        className="fixed top-2 left-2 z-50 -translate-y-20 rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground focus:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        Skip to content
+      </a>
+      <header className="border-b border-border bg-surface [view-transition-name:site-header]">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4 py-2 text-sm">
         <Link
           href="/"
@@ -50,5 +57,6 @@ export async function Nav() {
         </div>
       </div>
     </header>
+    </>
   );
 }

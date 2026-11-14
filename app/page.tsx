@@ -5,6 +5,7 @@ import { KIND_LABEL } from "@/lib/meal-kinds";
 import { addDays, hourET, weekStartOf, todayET, weekLabel, weekRelation } from "@/lib/dates";
 import { groceryFocus, quickPicks, shouldPlanNextWeek, weekStatus } from "@/lib/home-week";
 import { gettingStarted } from "@/lib/getting-started";
+import { FlashToast } from "@/components/flash-toast";
 import { headsUp } from "@/lib/heads-up";
 import { clockBefore, formatMinutes } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
@@ -35,7 +36,8 @@ function Thumb({ image, protein }: { image: string | null; protein: string }) {
   return <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-10 shrink-0 rounded-md object-cover" />;
 }
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
+  const { password } = await searchParams;
   const { supabase, householdId, displayName } = await requireHousehold();
   const today = todayET();
   const weekStart = weekStartOf(today);
@@ -179,7 +181,8 @@ export default async function Home() {
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-6">
+      {password === "changed" && <FlashToast message="Password changed." param="password" />}
+      <main id="main" className="mx-auto w-full max-w-2xl space-y-5 px-4 py-6">
         <h1 className="text-2xl font-bold">
           {greeting}
           {displayName ? `, ${displayName}` : ""}

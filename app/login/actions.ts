@@ -31,3 +31,21 @@ export async function submitLogin(_prev: LoginState | undefined, formData: FormD
   }
   redirect("/");
 }
+
+/** Emails a link to choose a new password. It says the same thing whether or not the address has an account. */
+export async function requestPasswordReset(_prev: LoginState | undefined, formData: FormData): Promise<LoginState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { message: "Enter your email address.", email };
+  const supabase = await createClient();
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${proto}://${host}/auth/callback?next=/reset-password`,
+  });
+  // A rate-limit or server problem is worth saying. An unknown address is not, so as not to reveal who has an account.
+  if (error && /rate|limit|too many/i.test(error.message)) {
+    return { message: "Too many tries. Wait a few minutes, then try again.", email };
+  }
+  return { message: "If that email has an account, a link to choose a new password is on its way. Check your inbox.", info: true, email };
+}

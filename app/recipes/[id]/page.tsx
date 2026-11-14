@@ -122,7 +122,7 @@ export default async function RecipePage({
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6">
         <BackLink href="/recipes">All recipes</BackLink>
 
         <div className="mt-1 overflow-hidden rounded-lg">

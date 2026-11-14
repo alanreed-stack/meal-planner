@@ -248,7 +248,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
     <>
       <Nav />
       <SearchProvider initialQ={q}>
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-3 flex items-center gap-3">
           <h1 className="flex-1 text-2xl font-bold">Recipes</h1>
           <ButtonLink href="/recipes/new" variant="primary">

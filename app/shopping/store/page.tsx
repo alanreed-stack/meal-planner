@@ -38,8 +38,8 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   }));
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-xl bg-background px-4 pb-20">
+    <main id="main" className="mx-auto min-h-screen w-full max-w-xl bg-background px-4 pb-20">
       <StoreList items={items} order={CATEGORIES} weekId={week?.id ?? null} weekStart={weekStart} weekText={weekLabel(weekStart)} />
-    </div>
+    </main>
   );
 }

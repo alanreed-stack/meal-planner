@@ -408,7 +408,7 @@ export default async function PlanPage({
           knownIds={(meals ?? []).map((m) => m.id)}
         />
       )}
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 lg:max-w-7xl">
+      <main id="main" className="mx-auto w-full max-w-5xl px-4 py-6 lg:max-w-7xl">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <IconLink href={`/plan?w=${addDays(weekStart, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />

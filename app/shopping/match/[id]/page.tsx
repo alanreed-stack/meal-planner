@@ -52,7 +52,7 @@ export default async function MatchPage({
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6">
         <BackLink href={back}>Back to list</BackLink>
         <h1 className="mt-2 text-xl font-bold">Pick a Kroger product for: {item.name}</h1>
         <form className="my-4 flex gap-2">

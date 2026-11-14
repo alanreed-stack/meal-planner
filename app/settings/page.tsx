@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LogOut, Plus, X } from "lucide-react";
+import { KeyRound, LogOut, Plus, X } from "lucide-react";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
 import { weekStartOf, todayET } from "@/lib/dates";
@@ -10,13 +10,19 @@ import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { SubmitIconButton } from "@/components/ui/icon-button";
-import { addStaple, addUsualStaples, removeStaple } from "./actions";
+import { addStaple, addUsualStaples, leaveHousehold, removeStaple, saveMember } from "./actions";
+import { Appearance } from "./appearance";
+import { cookies } from "next/headers";
+import { Notice } from "@/components/ui/notice";
 import { savePlanSettings } from "../plan/actions";
 import { CopyButton } from "./copy-button";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ left?: string }> }) {
+  const { left } = await searchParams;
+  const themeCookie = (await cookies()).get("theme")?.value;
+  const theme = themeCookie === "light" || themeCookie === "dark" ? themeCookie : "auto";
   const { supabase, householdId, inviteCode, householdName, user } = await requireHousehold();
   const { data: members } = await supabase
     .from("household_members")
@@ -40,8 +46,10 @@ export default async function SettingsPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl space-y-5 px-4 py-6">
         <h1 className="text-2xl font-bold">Settings</h1>
+        {left === "last" && <Notice tone="warning">You are the only member, so you can&apos;t leave. Invite someone first.</Notice>}
+        {left === "failed" && <Notice tone="error">Couldn&apos;t leave the household. Try again.</Notice>}
 
         <Card as="section" id="household" className="scroll-mt-4 space-y-4" aria-labelledby="h-household">
           <div>
@@ -64,14 +72,44 @@ export default async function SettingsPage() {
 
           <ul className="divide-y divide-border rounded-md border border-border text-sm">
             {(members ?? []).map((m) => (
-              <li key={m.user_id} className="flex min-h-12 items-center gap-2 px-3 py-2">
-                <span className="flex-1">
-                  {m.display_name || "Member"}
-                  {m.user_id === user.id && <span className="ml-2 text-xs text-muted">(you)</span>}
-                </span>
-                <Badge tone={m.eats_keto ? "diet-keto" : "neutral"}>
-                  {m.eats_keto ? "eats keto" : "eats regular"}
-                </Badge>
+              <li key={m.user_id} className="px-3 py-2">
+                <div className="flex min-h-10 items-center gap-2">
+                  <span className="flex-1">
+                    {m.display_name || "Member"}
+                    {m.user_id === user.id && <span className="ml-2 text-xs text-muted">(you)</span>}
+                  </span>
+                  <Badge tone={m.eats_keto ? "diet-keto" : "neutral"}>
+                    {m.eats_keto ? "eats keto" : "eats regular"}
+                  </Badge>
+                </div>
+                {m.user_id === user.id && (
+                  <details className="mt-1">
+                    <summary className="flex min-h-11 cursor-pointer items-center text-primary-ink underline">Edit my details</summary>
+                    <form action={saveMember} className="space-y-3 pb-2">
+                      <Field label="Your name">
+                        <Input name="display_name" defaultValue={m.display_name ?? ""} maxLength={40} />
+                      </Field>
+                      <label className="flex min-h-11 items-center gap-3">
+                        <input type="checkbox" name="keto" defaultChecked={m.eats_keto} className="size-5 accent-primary" />
+                        I eat keto
+                      </label>
+                      <SubmitButton variant="primary">Save</SubmitButton>
+                    </form>
+                    <form action={leaveHousehold} className="border-t border-border pt-2">
+                      {(members ?? []).length < 2 ? (
+                        <p className="text-muted">You are the only member, so you can&apos;t leave. Invite someone first.</p>
+                      ) : (
+                        <details>
+                          <summary className="flex min-h-11 cursor-pointer items-center text-danger-ink">Leave this household</summary>
+                          <p className="mb-2 text-muted">
+                            You will lose access to its recipes, plans and lists. Someone in the household can invite you back with the code.
+                          </p>
+                          <SubmitButton variant="danger">Yes, leave</SubmitButton>
+                        </details>
+                      )}
+                    </form>
+                  </details>
+                )}
               </li>
             ))}
           </ul>
@@ -168,15 +206,30 @@ export default async function SettingsPage() {
           </div>
         </Card>
 
+        <Card as="section" className="space-y-3" aria-labelledby="h-appearance">
+          <div>
+            <h2 id="h-appearance" className="text-lg font-semibold">
+              Appearance
+            </h2>
+            <p className="text-sm text-muted">Saved on this phone or computer.</p>
+          </div>
+          <Appearance initial={theme} />
+        </Card>
+
         <Card as="section" className="space-y-3" aria-labelledby="h-account">
           <h2 id="h-account" className="text-lg font-semibold">
             Account
           </h2>
-          <form action={signOut}>
-            <SubmitButton>
-              <LogOut aria-hidden className="size-4" /> Sign out
-            </SubmitButton>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/reset-password">
+              <KeyRound aria-hidden className="size-4" /> Change password
+            </ButtonLink>
+            <form action={signOut}>
+              <SubmitButton>
+                <LogOut aria-hidden className="size-4" /> Sign out
+              </SubmitButton>
+            </form>
+          </div>
         </Card>
       </main>
     </>

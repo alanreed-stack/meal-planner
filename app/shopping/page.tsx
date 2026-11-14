@@ -319,7 +319,7 @@ export default async function ShoppingPage({
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <IconLink href={`/shopping?w=${addDays(weekStart, -7)}`} label="Previous week">
             <ChevronLeft aria-hidden className="size-5" />

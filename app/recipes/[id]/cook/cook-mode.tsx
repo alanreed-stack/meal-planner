@@ -196,7 +196,7 @@ export function CookMode({
   const finishedTimers = timers.filter((t) => t.endsAt <= now && now > 0);
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-2xl bg-background px-4 pb-32">
+    <main id="main" className="mx-auto min-h-screen w-full max-w-2xl bg-background px-4 pb-32">
       <header className="sticky top-0 z-10 -mx-4 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-2">
           <ButtonLink href={backHref} size="sm">
@@ -421,6 +421,6 @@ export function CookMode({
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

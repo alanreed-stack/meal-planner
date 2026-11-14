@@ -39,8 +39,9 @@
   --diet-family-soft: #fef3c7;
 }
 
+/* Dark colors. They apply when the phone is set to dark (unless Light was chosen in Settings), or when Dark was chosen. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --surface: #161616;
     --surface-muted: #222222;
@@ -71,6 +72,41 @@
     --diet-family: #fcd34d;
     --diet-family-soft: #3a2a0a;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --surface: #161616;
+  --surface-muted: #222222;
+  --border: #333333;
+  --foreground: #ededed;
+  --muted: #a3a3a3;
+
+  --primary: #15803d;
+  --primary-foreground: #ffffff;
+  --primary-soft: #11291a;
+  --primary-ink: #86efac;
+  --ring: #4ade80;
+
+  --danger: #dc2626;
+  --danger-soft: #3a1414;
+  --danger-ink: #fca5a5;
+  --warning: #f59e0b;
+  --warning-soft: #3a2a0a;
+  --warning-ink: #fcd34d;
+  --info: #3b82f6;
+  --info-soft: #10233f;
+  --info-ink: #93c5fd;
+
+  --diet-both: #86efac;
+  --diet-both-soft: #14301f;
+  --diet-keto: #93c5fd;
+  --diet-keto-soft: #11264a;
+  --diet-family: #fcd34d;
+  --diet-family-soft: #3a2a0a;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {
@@ -175,5 +211,25 @@ body {
   }
   body:has([data-actionbar]) [data-toasts] {
     bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Moving between pages: a short fade, and the header and tab bar stay put instead of flickering. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 160ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Installed as an app: the page itself handles pull to refresh, so the browser's own reload gesture stays out of the way. */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: contain;
   }
 }

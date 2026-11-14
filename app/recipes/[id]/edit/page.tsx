@@ -23,7 +23,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6">
         <BackLink href={`/recipes/${id}`}>Back to recipe</BackLink>
         <h1 className="mb-4 mt-2 text-2xl font-bold">Edit: {r.name}</h1>
         <NewRecipeForm

@@ -10,7 +10,7 @@ export default async function NewRecipePage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-2xl px-4 py-6">
         <BackLink href="/recipes">All recipes</BackLink>
         <h1 className="mb-4 mt-2 text-2xl font-bold">Add a recipe</h1>
         <NewRecipeForm householdId={householdId} />
