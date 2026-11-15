@@ -11,7 +11,7 @@ import { mainProtein } from "@/lib/protein";
 import { searchText } from "@/lib/recipe-search";
 import { costIfKnown, estimateCost, money, type SavedMatch } from "@/lib/recipe-cost";
 import { scaleFactor } from "@/lib/scale";
-import { todayET } from "@/lib/dates";
+import { addDays, todayET, weekStartOf } from "@/lib/dates";
 import { Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Badge, DietBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -82,7 +82,8 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         "id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite, archived, rating, image_url"
       ),
     supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category, family_only, component_id, from_scratch"),
-    supabase.from("planned_meals").select("recipe_id, day").not("recipe_id", "is", null).lte("day", today),
+    // Every meal on the plan through the end of this week counts, so planning a week is what adds to the total.
+    supabase.from("planned_meals").select("recipe_id, day").not("recipe_id", "is", null).eq("kind", "recipe").lte("day", addDays(weekStartOf(today), 6)),
   ]);
 
   const comps = await loadComponentMap(supabase);
@@ -95,11 +96,16 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
     ])
   );
   const lastMade = new Map<string, string>();
+  const timesMade = new Map<string, number>();
   for (const m of made ?? []) {
-    if (m.recipe_id && (!lastMade.has(m.recipe_id) || m.day > lastMade.get(m.recipe_id)!)) {
+    if (!m.recipe_id) continue;
+    timesMade.set(m.recipe_id, (timesMade.get(m.recipe_id) ?? 0) + 1);
+    // "Made 3 days ago" only looks at days that have happened, not the rest of this week's plan.
+    if (m.day <= today && (!lastMade.has(m.recipe_id) || m.day > lastMade.get(m.recipe_id)!)) {
       lastMade.set(m.recipe_id, m.day);
     }
   }
+  const timesOf = (id: string) => timesMade.get(id) ?? 0;
 
   const total = (r: { prep_minutes: number | null; cook_minutes: number | null }) =>
     (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0);
@@ -131,7 +137,12 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
     .filter((r) => !quick || r.tags?.includes("quick") || total(r) <= 30)
     .filter((r) => !diet || r.diet === diet)
     .filter((r) => !p || protein(r.id) === p)
+    .filter((r) => s !== "frequent" || timesOf(r.id) > 0)
     .sort((a, b) => {
+      if (s === "frequent") {
+        // Most often first. A tie goes to the one made more recently.
+        return timesOf(b.id) - timesOf(a.id) || (lastMade.get(b.id) ?? "").localeCompare(lastMade.get(a.id) ?? "") || a.name.localeCompare(b.name);
+      }
       if (s === "time") return total(a) - total(b) || a.name.localeCompare(b.name);
       if (s === "rating") {
         // Liked first, then not yet rated, then not-a-fan; favorites win a tie.
@@ -172,7 +183,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
 
   const madeLabel = (id: string) => {
     const l = lastMade.get(id);
-    if (!l) return "Never made";
+    if (!l) return timesOf(id) ? "On this week's plan" : "Never made";
     const days = Math.round((Date.parse(today + "T00:00:00Z") - Date.parse(l + "T00:00:00Z")) / 86_400_000);
     if (days <= 0) return "Made today";
     if (days < 7) return `Made ${days} day${days === 1 ? "" : "s"} ago`;
@@ -237,6 +248,11 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                     <Badge className="tabular-nums">{formatMinutes(total(r))}</Badge>
                     <Badge>{r.difficulty}</Badge>
                     <Badge>{madeLabel(r.id)}</Badge>
+                    {timesOf(r.id) > 0 && (
+                      <Badge tone={s === "frequent" ? "info" : "neutral"} className="tabular-nums">
+                        {timesOf(r.id)}× total
+                      </Badge>
+                    )}
                     {s === "cheapest" && (
                       <Badge tone={costOf.get(r.id) != null ? "info" : "neutral"} className="tabular-nums">
                         {costOf.get(r.id) != null ? `about ${money(costOf.get(r.id)!)}` : "no price yet"}
@@ -301,6 +317,9 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
           </SearchChipLink>
           <SearchChipLink className="shrink-0" href={href({ fav: fav ? "" : "1" })} on={fav}>
             Favorites
+          </SearchChipLink>
+          <SearchChipLink className="shrink-0" href={href({ s: s === "frequent" ? "name" : "frequent" })} on={s === "frequent"}>
+            Frequent
           </SearchChipLink>
           <SearchChipLink className="shrink-0" href={href({ diet: diet === "both" ? "" : "both" })} on={diet === "both"}>
             Keto + family
