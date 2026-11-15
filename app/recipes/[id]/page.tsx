@@ -22,6 +22,9 @@ import { duplicateRecipe } from "../actions";
 import { RecipeTile } from "../recipe-tile";
 import { AddToWeek } from "./add-to-week";
 import { LbsControl } from "./lbs-control";
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
+import { setComponentMode } from "./component-actions";
 
 export async function generateMetadata({
   params,
@@ -69,7 +72,7 @@ export default async function RecipePage({
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("id, name, qty, unit, category, family_only")
+    .select("id, name, qty, unit, category, family_only, component_id, from_scratch")
     .eq("recipe_id", id)
     .order("sort");
 
@@ -84,7 +87,9 @@ export default async function RecipePage({
   const timesMade = (madeRows ?? []).length;
   const lastMade = madeRows?.[0]?.day;
   const weekStart = weekStartOf(today);
-  const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
+  const rows = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
+  const comps = await loadComponentMap(supabase);
+  const list = expandIngredients(rows, comps).map((i, n) => ({ ...i, id: `x${n}` }));
   const base = proteinLbs(list);
   const factor = scaleFactor(list, target);
 
@@ -203,16 +208,63 @@ export default async function RecipePage({
           <p className="mt-1 text-sm text-muted">This recipe has no weighed meat, so the amounts are as written.</p>
         )}
         <ul className="mt-3 space-y-2 tabular-nums">
-          {list.map((i) => (
-            <li key={i.id}>
-              {formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name)}
-              {i.family_only && (
-                <Badge tone="diet-family" className="ml-2">
-                  family only
-                </Badge>
-              )}
-            </li>
-          ))}
+          {rows.map((i) => {
+            const c = i.component_id ? comps.get(i.component_id) : undefined;
+            if (i.component_id && !c) return null;
+            if (!c) {
+              return (
+                <li key={i.id}>
+                  {formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name)}
+                  {i.family_only && (
+                    <Badge tone="diet-family" className="ml-2">
+                      family only
+                    </Badge>
+                  )}
+                </li>
+              );
+            }
+            const scratch = i.from_scratch !== false;
+            const batches = i.qty ?? 1;
+            const lines = expandIngredients([i], comps);
+            return (
+              <li key={i.id} className="rounded-md border border-border bg-surface-muted p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    {batches !== 1 ? `${batches} × ` : ""}
+                    {c.name}
+                  </span>
+                  {i.family_only && <Badge tone="diet-family">family only</Badge>}
+                  <form action={setComponentMode} className="ml-auto flex overflow-hidden rounded-md border border-border text-sm">
+                    <input type="hidden" name="row_id" value={i.id} />
+                    <input type="hidden" name="recipe_id" value={r.id} />
+                    <button
+                      name="mode"
+                      value="make"
+                      aria-pressed={scratch}
+                      className={`min-h-11 px-3 ${scratch ? "bg-primary text-primary-foreground" : "bg-surface"}`}
+                    >
+                      Make it
+                    </button>
+                    <button
+                      name="mode"
+                      value="buy"
+                      aria-pressed={!scratch}
+                      className={`min-h-11 px-3 ${!scratch ? "bg-primary text-primary-foreground" : "bg-surface"}`}
+                    >
+                      Buy it
+                    </button>
+                  </form>
+                </div>
+                <ul className="mt-2 space-y-1 pl-4 text-sm text-muted">
+                  {lines.map((l, n) => (
+                    <li key={n} className="list-disc">
+                      {formatIngredient(l.qty != null ? niceQty(l.qty * factor, l.unit) : null, l.unit, l.name)}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
         </ul>
 
         <h2 className="mt-8 text-lg font-semibold">Steps</h2>

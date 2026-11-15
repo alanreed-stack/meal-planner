@@ -1,3 +1,5 @@
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import type { Metadata } from "next";
@@ -79,16 +81,19 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
       .select(
         "id, name, description, diet, prep_minutes, cook_minutes, difficulty, tags, favorite, archived, rating, image_url"
       ),
-    supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category, family_only"),
+    supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category, family_only, component_id, from_scratch"),
     supabase.from("planned_meals").select("recipe_id, day").not("recipe_id", "is", null).lte("day", today),
   ]);
 
-  const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string; family_only: boolean }[]>();
-  for (const i of ings ?? []) {
-    const list = ingsBy.get(i.recipe_id) ?? [];
-    list.push({ name: i.name, qty: i.qty == null ? null : Number(i.qty), unit: i.unit, category: i.category, family_only: i.family_only });
-    ingsBy.set(i.recipe_id, list);
-  }
+  const comps = await loadComponentMap(supabase);
+  const rawBy = new Map<string, NonNullable<typeof ings>>();
+  for (const i of ings ?? []) rawBy.set(i.recipe_id, [...(rawBy.get(i.recipe_id) ?? []), i]);
+  const ingsBy = new Map(
+    [...rawBy].map(([id, rows]) => [
+      id,
+      expandIngredients(rows.map((r) => ({ ...r, qty: r.qty == null ? null : Number(r.qty) })), comps),
+    ])
+  );
   const lastMade = new Map<string, string>();
   for (const m of made ?? []) {
     if (m.recipe_id && (!lastMade.has(m.recipe_id) || m.day > lastMade.get(m.recipe_id)!)) {
@@ -251,6 +256,9 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
       <main id="main" className="mx-auto w-full max-w-5xl px-4 py-6">
         <div className="mb-3 flex items-center gap-3">
           <h1 className="flex-1 text-2xl font-bold">Recipes</h1>
+          <ButtonLink href="/recipes/components" variant="ghost">
+            Components
+          </ButtonLink>
           <ButtonLink href="/recipes/new" variant="primary">
             <Plus aria-hidden className="size-4" /> Add recipe
           </ButtonLink>
