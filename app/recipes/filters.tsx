@@ -71,6 +71,7 @@ export function FiltersSheet({ state, count }: { state: FilterState; count: numb
               <Select name="s" defaultValue={state.s}>
                 <option value="name">Name</option>
                 <option value="time">Cook time</option>
+                <option value="frequent">Most often made</option>
                 <option value="recent">Least recently made</option>
                 <option value="rating">Highest rated</option>
                 <option value="cheapest">Cheapest</option>

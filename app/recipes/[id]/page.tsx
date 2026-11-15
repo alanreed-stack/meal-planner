@@ -82,10 +82,11 @@ export default async function RecipePage({
     .select("day")
     .eq("recipe_id", id)
     .eq("kind", "recipe")
-    .lte("day", today)
+    .lte("day", addDays(weekStartOf(today), 6))
     .order("day", { ascending: false });
+  // Every meal planned through the end of this week counts. "Last on" only looks at days that have happened.
   const timesMade = (madeRows ?? []).length;
-  const lastMade = madeRows?.[0]?.day;
+  const lastMade = madeRows?.find((m) => m.day <= today)?.day;
   const weekStart = weekStartOf(today);
   const rows = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
   const comps = await loadComponentMap(supabase);
@@ -148,7 +149,7 @@ export default async function RecipePage({
         <p className="mt-2 text-sm text-muted tabular-nums">
           {timesMade === 0
             ? "Not made yet."
-            : `Made ${timesMade} time${timesMade === 1 ? "" : "s"}, last on ${new Date(lastMade + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}.`}
+            : `Made ${timesMade} time${timesMade === 1 ? "" : "s"}${lastMade ? `, last on ${new Date(lastMade + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : ", on this week's plan"}.`}
         </p>
 
         <Card as="dl" className="mt-4 grid grid-cols-4 gap-2 text-center">
