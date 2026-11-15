@@ -11,6 +11,7 @@ import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { parseIngredient } from "@/lib/ingredients";
+import { findComponent, parseComponentLine, type Component } from "@/lib/components";
 import { formatAmount } from "@/lib/format";
 import { resizeImage } from "@/lib/resize-image";
 
@@ -31,7 +32,15 @@ export type RecipeFormInitial = {
   image_url: string;
 };
 
-export function NewRecipeForm({ edit, householdId }: { edit?: RecipeFormInitial; householdId: string }) {
+export function NewRecipeForm({
+  edit,
+  householdId,
+  components = [],
+}: {
+  edit?: RecipeFormInitial;
+  householdId: string;
+  components?: Component[];
+}) {
   const [mode, setMode] = useState<"link" | "text">("link");
   const [fromLink, linkAction, linking] = useActionState(importRecipe, {});
   const [fromText, textAction, reading] = useActionState(importText, {});
@@ -187,6 +196,7 @@ export function NewRecipeForm({ edit, householdId }: { edit?: RecipeFormInitial;
             rows={edit ? 12 : 8}
             error={errors?.ingredients}
             autoFocus={!!errors?.ingredients && !errors?.name}
+            components={components}
           />
         </Card>
 
@@ -217,16 +227,19 @@ function IngredientsField({
   rows,
   error,
   autoFocus,
+  components,
 }: {
   defaultValue: string;
   rows: number;
   error?: string;
   autoFocus: boolean;
+  components: Component[];
 }) {
   const [text, setText] = useState(defaultValue);
+  const add = (name: string) => setText((t) => `${t.trimEnd()}${t.trim() ? "\n" : ""}@${name}`);
   const read = text
     .split("\n")
-    .map((raw) => ({ raw, p: parseIngredient(raw) }))
+    .map((raw) => ({ raw, p: parseIngredient(raw), c: parseComponentLine(raw) }))
     .filter((r) => r.raw.trim() !== "");
 
   return (
@@ -246,13 +259,44 @@ function IngredientsField({
           autoFocus={autoFocus}
         />
       </Field>
+      {components.length > 0 && (
+        <div>
+          <p className="mb-1 text-sm font-medium">Add something you make</p>
+          <div className="flex flex-wrap gap-2">
+            {components.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => add(c.name)}
+                className="min-h-11 rounded-md border border-border bg-surface px-3 text-sm hover:bg-surface-muted"
+              >
+                + {c.name}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            A line that starts with @ uses it. Add (buy) at the end to buy it ready-made, or a number after the @ for more than one batch.
+          </p>
+        </div>
+      )}
       {read.length > 0 && (
         <div aria-live="polite">
           <h3 className="mb-1 text-sm font-medium">How we read these ({read.length})</h3>
           <ul className="divide-y divide-border rounded-md border border-border text-sm">
             {read.map((r, i) => (
               <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
-                {r.p ? (
+                {r.c ? (
+                  findComponent(r.c.name, components) ? (
+                    <>
+                      <span className="min-w-16 font-medium tabular-nums">{r.c.batches !== 1 ? `${r.c.batches} ×` : "1 ×"}</span>
+                      <span className="min-w-0 flex-1 break-words">{findComponent(r.c.name, components)!.name}</span>
+                      <Badge>{r.c.from_scratch ? "make it" : "buy it"}</Badge>
+                      {r.c.family_only && <Badge tone="diet-family">family only</Badge>}
+                    </>
+                  ) : (
+                    <span className="text-danger-ink">No component called “{r.c.name}”</span>
+                  )
+                ) : r.p ? (
                   <>
                     <span className="min-w-16 font-medium tabular-nums">
                       {r.p.qty != null ? formatAmount(r.p.qty, r.p.unit) : <span className="text-warning-ink">no amount</span>}

@@ -1,3 +1,5 @@
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireHousehold } from "@/lib/household";
@@ -49,11 +51,14 @@ export default async function CookPage({
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("name, qty, unit, category, family_only")
+    .select("name, qty, unit, category, family_only, component_id, from_scratch")
     .eq("recipe_id", id)
     .order("sort");
 
-  const list = (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) }));
+  const list = expandIngredients(
+    (ings ?? []).map((i) => ({ ...i, qty: i.qty == null ? null : Number(i.qty) })),
+    await loadComponentMap(supabase)
+  );
   const factor = scaleFactor(list, target);
 
   return (

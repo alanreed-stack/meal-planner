@@ -1,5 +1,7 @@
 "use server";
 
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
 import { revalidatePath } from "next/cache";
 import { requireHousehold } from "@/lib/household";
 import { searchProducts } from "@/lib/kroger";
@@ -21,15 +23,22 @@ export async function priceRecipe(formData: FormData) {
   const locationId = hh?.kroger_location_id as string | null;
   if (!locationId || !id) return;
 
-  const { data: ings } = await supabase.from("recipe_ingredients").select("name, category").eq("recipe_id", id);
-  const keys = (ings ?? []).map((i) => costKey(i.name));
+  const { data: rows } = await supabase
+    .from("recipe_ingredients")
+    .select("name, qty, unit, category, component_id, from_scratch")
+    .eq("recipe_id", id);
+  const ings = expandIngredients(
+    (rows ?? []).map((r) => ({ ...r, qty: r.qty == null ? null : Number(r.qty) })),
+    await loadComponentMap(supabase)
+  );
+  const keys = ings.map((i) => costKey(i.name));
   const [{ data: have }, { data: staples }] = await Promise.all([
     supabase.from("kroger_matches").select("name_key, price").eq("household_id", householdId).in("name_key", keys),
     supabase.from("pantry_staples").select("name_key").eq("household_id", householdId).in("name_key", keys),
   ]);
   const priced = new Set((have ?? []).filter((m) => m.price != null).map((m) => m.name_key));
   const skip = new Set((staples ?? []).map((s) => s.name_key));
-  const todo = (ings ?? []).filter((i) => !priced.has(costKey(i.name)) && !skip.has(costKey(i.name)));
+  const todo = ings.filter((i) => !priced.has(costKey(i.name)) && !skip.has(costKey(i.name)));
 
   for (let i = 0; i < todo.length; i += 4) {
     await Promise.all(

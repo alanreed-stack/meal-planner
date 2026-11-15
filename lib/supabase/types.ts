@@ -10,6 +10,61 @@ export type Database = {
   };
   public: {
     Tables: {
+      component_ingredients: {
+        Row: {
+          category: string;
+          component_id: string;
+          household_id: string;
+          id: string;
+          name: string;
+          qty: number | null;
+          sort: number;
+          unit: string | null;
+        };
+        Insert: {
+          category?: string;
+          component_id: string;
+          household_id: string;
+          id?: string;
+          name: string;
+          qty?: number | null;
+          sort?: number;
+          unit?: string | null;
+        };
+        Update: {
+          category?: string;
+          component_id?: string;
+          household_id?: string;
+          id?: string;
+          name?: string;
+          qty?: number | null;
+          sort?: number;
+          unit?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "component_ingredients_component_id_fkey";
+            columns: ["component_id"];
+            isOneToOne: false;
+            referencedRelation: "components";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      components: {
+        Row: { buy_as: string | null; buy_unit: string; created_at: string; household_id: string; id: string; name: string };
+        Insert: { buy_as?: string | null; buy_unit?: string; created_at?: string; household_id: string; id?: string; name: string };
+        Update: { buy_as?: string | null; buy_unit?: string; created_at?: string; household_id?: string; id?: string; name?: string };
+        Relationships: [
+          {
+            foreignKeyName: "components_household_id_fkey";
+            columns: ["household_id"];
+            isOneToOne: false;
+            referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       household_members: {
         Row: {
           created_at: string;
@@ -248,7 +303,9 @@ export type Database = {
       recipe_ingredients: {
         Row: {
           category: string;
+          component_id: string | null;
           family_only: boolean;
+          from_scratch: boolean;
           household_id: string;
           id: string;
           name: string;
@@ -259,7 +316,9 @@ export type Database = {
         };
         Insert: {
           category?: string;
+          component_id?: string | null;
           family_only?: boolean;
+          from_scratch?: boolean;
           household_id: string;
           id?: string;
           name: string;
@@ -270,7 +329,9 @@ export type Database = {
         };
         Update: {
           category?: string;
+          component_id?: string | null;
           family_only?: boolean;
+          from_scratch?: boolean;
           household_id?: string;
           id?: string;
           name?: string;
@@ -285,6 +346,13 @@ export type Database = {
             columns: ["household_id"];
             isOneToOne: false;
             referencedRelation: "households";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipe_ingredients_component_id_fkey";
+            columns: ["component_id"];
+            isOneToOne: false;
+            referencedRelation: "components";
             referencedColumns: ["id"];
           },
           {

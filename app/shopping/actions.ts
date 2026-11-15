@@ -9,6 +9,8 @@ import { splitOptions } from "@/lib/match";
 import type { BuildSummary } from "@/lib/build-summary";
 import { carryOver } from "@/lib/cart-carry";
 import { matchWeekItems } from "@/lib/match-items";
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
 
 /** Rebuilds the auto-generated part of the list from the week's planned meals.
  *  Items you added by hand are kept. Merges the same ingredient+unit across recipes. */
@@ -64,14 +66,19 @@ export async function generateList(formData: FormData): Promise<BuildSummary> {
   if (recipeIds.length) {
     const { data: ings } = await supabase
       .from("recipe_ingredients")
-      .select("recipe_id, name, qty, unit, category")
+      .select("recipe_id, name, qty, unit, category, component_id, from_scratch")
       .in("recipe_id", recipeIds);
-    const byRecipe = new Map<string, typeof ings>();
+    // Components become their ingredients (or one bought item) first, so shared items merge below.
+    const comps = await loadComponentMap(supabase);
+    const rowsBy = new Map<string, NonNullable<typeof ings>>();
     for (const ing of ings ?? []) {
-      const list = byRecipe.get(ing.recipe_id) ?? [];
+      const list = rowsBy.get(ing.recipe_id) ?? [];
       list.push(ing);
-      byRecipe.set(ing.recipe_id, list);
+      rowsBy.set(ing.recipe_id, list);
     }
+    const byRecipe = new Map(
+      [...rowsBy].map(([id, rows]) => [id, expandIngredients(rows.map((r) => ({ ...r, qty: r.qty == null ? null : Number(r.qty) })), comps)])
+    );
     // Each planned meal adds its own ingredients, scaled to that meal's meat weight.
     for (const meal of meals ?? []) {
       if (!meal.recipe_id) continue;

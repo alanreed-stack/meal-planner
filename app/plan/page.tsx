@@ -1,3 +1,5 @@
+import { expandIngredients } from "@/lib/components";
+import { loadComponentMap } from "@/lib/load-components";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, ShoppingCart } from "lucide-react";
@@ -68,7 +70,7 @@ export default async function PlanPage({
         .select("id, name, diet, favorite, prep_minutes, cook_minutes, rating, image_url")
         .eq("archived", false)
         .order("name"),
-      supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category"),
+      supabase.from("recipe_ingredients").select("recipe_id, name, qty, unit, category, component_id, from_scratch"),
       supabase
         .from("planned_meals")
         .select("recipe_id, day")
@@ -95,12 +97,15 @@ export default async function PlanPage({
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // ---- what we know about each recipe: main meat, meat weight, last time it was planned
-  const ingsBy = new Map<string, { name: string; qty: number | null; unit: string | null; category: string }[]>();
-  for (const i of allIngs ?? []) {
-    const list = ingsBy.get(i.recipe_id) ?? [];
-    list.push({ name: i.name, qty: i.qty == null ? null : Number(i.qty), unit: i.unit, category: i.category });
-    ingsBy.set(i.recipe_id, list);
-  }
+  const comps = await loadComponentMap(supabase);
+  const rawBy = new Map<string, NonNullable<typeof allIngs>>();
+  for (const i of allIngs ?? []) rawBy.set(i.recipe_id, [...(rawBy.get(i.recipe_id) ?? []), i]);
+  const ingsBy = new Map(
+    [...rawBy].map(([id, rows]) => [
+      id,
+      expandIngredients(rows.map((r) => ({ ...r, qty: r.qty == null ? null : Number(r.qty) })), comps),
+    ])
+  );
   const proteinOf = new Map<string, string>();
   const baseLbs = new Map<string, number>();
   for (const r of recipes ?? []) {
