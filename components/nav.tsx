@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { weekStartOf, todayET } from "@/lib/dates";
-import { requireHousehold } from "@/lib/household";
+import { findHousehold } from "@/lib/household";
 import { signOut } from "@/lib/sign-out";
 import { NavTabs } from "./nav-tabs";
 import { Menu } from "./ui/menu";
@@ -9,7 +9,10 @@ import { SubmitButton } from "./ui/submit-button";
 
 /** The first upcoming week whose plan changed after its shopping list was built, if any. */
 async function staleListWeek(): Promise<string | null> {
-  const { supabase, householdId } = await requireHousehold();
+  // The loading skeleton shows this on /login too, so it must never redirect when nobody is signed in.
+  const h = await findHousehold();
+  if (h.state !== "ok") return null;
+  const { supabase, householdId } = h;
   const { data } = await supabase
     .from("weeks")
     .select("week_start, plan_changed_at, list_built_at")
