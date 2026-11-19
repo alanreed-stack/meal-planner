@@ -39,6 +39,7 @@ export function CookMode({
   notes,
   ingredients,
   steps,
+  stepAmounts = [],
 }: {
   recipeId: string;
   /** Tonight's planned meal for this recipe, so the rating lands on it. */
@@ -52,6 +53,8 @@ export function CookMode({
   notes: string;
   ingredients: Ing[];
   steps: string[];
+  /** For each step, the amounts of the ingredients it uses. */
+  stepAmounts?: string[][];
 }) {
   const toast = useToast();
   const key = cookKey(recipeId, today);
@@ -350,6 +353,11 @@ export function CookMode({
                 </span>
                 <span>{s}</span>
               </RowButton>
+              {(stepAmounts[i]?.length ?? 0) > 0 && !done[i] && (
+                <p className={cn("mt-2 pl-1 text-muted", large ? "text-xl" : "text-base")}>
+                  <span className="font-semibold text-foreground">Use:</span> {stepAmounts[i].join(" · ")}
+                </p>
+              )}
               {found.length > 0 && !done[i] && (
                 <div className="mt-2 flex flex-wrap gap-2 pl-1">
                   {found.map((f) => {

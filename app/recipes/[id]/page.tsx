@@ -1,3 +1,4 @@
+import { amountsByStep } from "@/lib/step-amounts";
 import { notFound, redirect } from "next/navigation";
 import { requireHousehold } from "@/lib/household";
 import { Nav } from "@/components/nav";
@@ -116,6 +117,10 @@ export default async function RecipePage({
     new Set((stapleRows ?? []).map((s) => s.name_key))
   );
   const hasStore = !!hh?.kroger_location_id;
+  const perStep = amountsByStep(
+    r.steps,
+    list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name) }))
+  );
 
   const protein = mainProtein(list);
   const totalMin = (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0);
@@ -273,6 +278,11 @@ export default async function RecipePage({
           {r.steps.map((s: string, i: number) => (
             <li key={i} className="pl-1">
               {s}
+              {perStep[i].length > 0 && (
+                <span className="mt-1 block text-sm text-muted tabular-nums">
+                  <span className="font-medium text-foreground">Use:</span> {perStep[i].map((x) => x.text).join(" · ")}
+                </span>
+              )}
             </li>
           ))}
         </ol>
