@@ -1,3 +1,4 @@
+import { amountsByStep } from "@/lib/step-amounts";
 import { expandIngredients } from "@/lib/components";
 import { loadComponentMap } from "@/lib/load-components";
 import { notFound } from "next/navigation";
@@ -75,6 +76,10 @@ export default async function CookPage({
         familyOnly: i.family_only,
       }))}
       steps={r.steps ?? []}
+      stepAmounts={amountsByStep(
+        r.steps ?? [],
+        list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name) }))
+      ).map((s) => s.map((x) => x.text))}
     />
   );
 }
