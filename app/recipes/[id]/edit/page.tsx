@@ -18,7 +18,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("name, qty, unit, family_only, component_id, from_scratch")
+    .select("name, qty, unit, family_only, component_id, from_scratch, note, size")
     .eq("recipe_id", id)
     .order("sort");
 
@@ -59,6 +59,8 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
                   qty: i.qty == null ? null : Number(i.qty),
                   unit: i.unit,
                   family_only: i.family_only,
+                  note: i.note,
+                  size: i.size,
                 })
               )
               .join("\n"),

@@ -55,7 +55,7 @@ export async function duplicateRecipe(formData: FormData) {
 
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("name, qty, unit, category, family_only, sort, component_id, from_scratch")
+    .select("name, qty, unit, category, family_only, sort, component_id, from_scratch, note, size")
     .eq("recipe_id", id)
     .order("sort");
   if (ings?.length) {

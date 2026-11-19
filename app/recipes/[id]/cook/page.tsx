@@ -52,7 +52,7 @@ export default async function CookPage({
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("name, qty, unit, category, family_only, component_id, from_scratch")
+    .select("name, qty, unit, category, family_only, component_id, from_scratch, note, size")
     .eq("recipe_id", id)
     .order("sort");
 
@@ -72,13 +72,13 @@ export default async function CookPage({
       ketoNote={r.keto_swap ?? ""}
       notes={r.notes ?? ""}
       ingredients={list.map((i) => ({
-        text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name),
+        text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name, i),
         familyOnly: i.family_only,
       }))}
       steps={r.steps ?? []}
       stepAmounts={amountsByStep(
         r.steps ?? [],
-        list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name) }))
+        list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name, i) }))
       ).map((s) => s.map((x) => x.text))}
     />
   );

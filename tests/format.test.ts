@@ -68,3 +68,27 @@ describe("clockBefore", () => {
     expect(clockBefore("00:30:00", 60)).toBe("11:30 PM");
   });
 });
+
+import { formatIngredient as fi, usualCanSize } from "@/lib/format";
+import { ingredientToLine as toLine, parseIngredient as parse } from "@/lib/ingredients";
+
+describe("notes and package sizes", () => {
+  it("shows the prep note after the name", () => {
+    expect(fi(1, "piece", "yellow onion", { note: "diced" })).toBe("1 yellow onion, diced");
+    expect(fi(null, null, "salt", { note: "to taste" })).toBe("salt, to taste");
+  });
+  it("puts the size after the package word", () => {
+    expect(fi(1, "can", "tomato sauce (canned)", { size: "15 oz" })).toBe("1 can (15 oz) tomato sauce");
+    expect(fi(2, "can", "black beans", {})).toBe("2 cans (15 oz) black beans");
+  });
+  it("leaves the size off when it is unknown", () => {
+    expect(fi(1, "can", "mystery stew")).toBe("1 can mystery stew");
+    expect(usualCanSize("crushed tomatoes")).toBeNull();
+  });
+  it("reads and writes size and note", () => {
+    const p = parse("1 (15 oz) can tomato sauce, drained")!;
+    expect(p).toMatchObject({ name: "tomato sauce", unit: "can", size: "15 oz", note: "drained", qty: 1 });
+    expect(toLine({ ...p })).toBe("1 (15 oz) can tomato sauce, drained");
+    expect(parse("1 yellow onion, diced")).toMatchObject({ name: "yellow onion", note: "diced", size: null });
+  });
+});

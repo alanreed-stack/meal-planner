@@ -38,7 +38,7 @@ describe("expandIngredients", () => {
       map
     );
     expect(out).toEqual([
-      { name: "pico de gallo", qty: 1, unit: "jar", category: "pantry", family_only: false, via: "Pico de gallo" },
+      { name: "pico de gallo", qty: 1, unit: "jar", category: "pantry", family_only: false, note: null, size: null, via: "Pico de gallo" },
     ]);
   });
   it("carries family-only to every expanded row", () => {

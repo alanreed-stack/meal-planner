@@ -73,7 +73,7 @@ export default async function RecipePage({
   if (!r) notFound();
   const { data: ings } = await supabase
     .from("recipe_ingredients")
-    .select("id, name, qty, unit, category, family_only, component_id, from_scratch")
+    .select("id, name, qty, unit, category, family_only, component_id, from_scratch, note, size")
     .eq("recipe_id", id)
     .order("sort");
 
@@ -119,7 +119,7 @@ export default async function RecipePage({
   const hasStore = !!hh?.kroger_location_id;
   const perStep = amountsByStep(
     r.steps,
-    list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name) }))
+    list.map((i) => ({ name: i.name, text: formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name, i) }))
   );
 
   const protein = mainProtein(list);
@@ -220,7 +220,7 @@ export default async function RecipePage({
             if (!c) {
               return (
                 <li key={i.id}>
-                  {formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name)}
+                  {formatIngredient(i.qty != null ? niceQty(i.qty * factor, i.unit) : null, i.unit, i.name, i)}
                   {i.family_only && (
                     <Badge tone="diet-family" className="ml-2">
                       family only
