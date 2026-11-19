@@ -71,6 +71,10 @@ export type ParsedIngredient = {
   unit: string | null;
   category: string;
   family_only: boolean;
+  /** What to do with it ("diced"). */
+  note: string | null;
+  /** Package size ("15 oz"), from "1 (15 oz) can". */
+  size: string | null;
 };
 
 /** A leading "+" marks a family-only ingredient (not needed for the keto plate). */
@@ -96,7 +100,12 @@ export function parseIngredient(rawLine: string): ParsedIngredient | null {
     rest = line.slice(m[0].length);
   }
 
-  rest = rest.replace(/^\([^)]*\)\s*/, ""); // "1 (14 oz) can" -> "1 can"
+  let size: string | null = null;
+  const sz = rest.match(/^\(([^)]*)\)\s*/); // "1 (14 oz) can" -> size "14 oz"
+  if (sz) {
+    if (/\d/.test(sz[1])) size = sz[1].trim();
+    rest = rest.slice(sz[0].length);
+  }
   const w = rest.match(/^([a-zA-Z]+)\.?\s+/);
   if (w && UNITS[w[1].toLowerCase()]) {
     unit = UNITS[w[1].toLowerCase()];
@@ -104,14 +113,12 @@ export function parseIngredient(rawLine: string): ParsedIngredient | null {
   }
   rest = rest.replace(/^of\s+/i, "");
 
-  const name = rest
-    .replace(/\([^)]*\)/g, "")
-    .split(",")[0]
-    .replace(/\s+/g, " ")
-    .trim();
+  const [head, ...after] = rest.replace(/\([^)]*\)/g, "").split(",");
+  const name = head.replace(/\s+/g, " ").trim();
   if (!name) return null;
+  const note = after.join(",").replace(/\s+/g, " ").trim().slice(0, 80) || null;
 
-  return { name, qty, unit, category: guessCategory(name), family_only };
+  return { name, qty, unit, category: guessCategory(name), family_only, note, size };
 }
 
 /** The reverse of parseIngredient: a stored ingredient back into an editable line. */
@@ -120,9 +127,13 @@ export function ingredientToLine(i: {
   qty: number | null;
   unit: string | null;
   family_only: boolean;
+  note?: string | null;
+  size?: string | null;
 }): string {
   const qty = i.qty == null ? "" : String(Math.round(Number(i.qty) * 100) / 100);
-  return [i.family_only ? "+" : "", qty, i.unit ?? "", i.name].filter(Boolean).join(" ");
+  const size = i.size ? `(${i.size})` : "";
+  const line = [i.family_only ? "+" : "", qty, size, i.unit ?? "", i.name].filter(Boolean).join(" ");
+  return i.note ? `${line}, ${i.note}` : line;
 }
 
 /** Lowercase name without "(canned)"-style notes, so an edited line can find the stored ingredient. */

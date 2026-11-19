@@ -54,12 +54,42 @@ export function displayName(name: string, unit: string | null): string {
   return name.trim();
 }
 
-export function formatIngredient(qty: number | null, unit: string | null, name: string): string {
+export function formatIngredient(
+  qty: number | null,
+  unit: string | null,
+  name: string,
+  extra?: { size?: string | null; note?: string | null }
+): string {
   const clean = displayName(name, unit);
-  if (qty == null) return clean;
+  const note = extra?.note?.trim();
+  const tail = note ? `, ${note}` : "";
+  if (qty == null) return clean + tail;
   const label = unitLabel(unit, qty);
   const noun = unit === "piece" && qty > 1.0001 ? pluralizeName(clean) : clean;
-  return [formatQty(qty), label, noun].filter(Boolean).join(" ");
+  // "1 can (15 oz) tomato sauce": the size goes right after the package word. The usual size is only filled in for
+  // recipes (when extra is given), not on the shopping list, which has its own package sizes.
+  const size = extra?.size?.trim() || (unit === "can" && extra ? usualCanSize(clean) : null);
+  const sized = size && label ? `${label} (${size})` : label;
+  return [formatQty(qty), sized, noun].filter(Boolean).join(" ") + tail;
+}
+
+// Common US can sizes, so "1 can tomato sauce" says how big. Left out where it varies by brand.
+const CAN_SIZES: [RegExp, string][] = [
+  [/tomato sauce/i, "15 oz"],
+  [/diced tomato|petite diced/i, "14.5 oz"],
+  [/tomato paste/i, "6 oz"],
+  [/coconut (milk|cream)/i, "13.5 oz"],
+  [/beans?$|chickpeas|garbanzo/i, "15 oz"],
+  [/green chil/i, "4 oz"],
+  [/rotel|tomatoes (and|&) (green )?chil/i, "10 oz"],
+  [/tuna/i, "5 oz"],
+  [/cream of .*soup/i, "10.5 oz"],
+  [/enchilada sauce/i, "10 oz"],
+  [/pumpkin/i, "15 oz"],
+  [/corn/i, "15 oz"],
+];
+export function usualCanSize(name: string): string | null {
+  return CAN_SIZES.find(([re]) => re.test(name))?.[1] ?? null;
 }
 
 /** The amount only, e.g. "4 lb" or "1 ⅓ cups". Used in "Need 4 lb · buying 4 × 1 lb". */

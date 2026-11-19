@@ -309,8 +309,10 @@ export type Database = {
           household_id: string;
           id: string;
           name: string;
+          note: string | null;
           qty: number | null;
           recipe_id: string;
+          size: string | null;
           sort: number;
           unit: string | null;
         };
@@ -322,8 +324,10 @@ export type Database = {
           household_id: string;
           id?: string;
           name: string;
+          note?: string | null;
           qty?: number | null;
           recipe_id: string;
+          size?: string | null;
           sort?: number;
           unit?: string | null;
         };
@@ -335,8 +339,10 @@ export type Database = {
           household_id?: string;
           id?: string;
           name?: string;
+          note?: string | null;
           qty?: number | null;
           recipe_id?: string;
+          size?: string | null;
           sort?: number;
           unit?: string | null;
         };

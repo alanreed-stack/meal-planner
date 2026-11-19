@@ -95,6 +95,8 @@ export async function saveRecipe(_prev: SaveState | undefined, formData: FormDat
         unit: null,
         category: "pantry",
         family_only: cl.family_only,
+        note: null,
+        size: null,
         component_id: c.id,
         from_scratch: cl.from_scratch,
       });
@@ -189,6 +191,8 @@ export async function saveRecipe(_prev: SaveState | undefined, formData: FormDat
       family_only: ing.family_only,
       component_id: "component_id" in ing ? ing.component_id : null,
       from_scratch: "from_scratch" in ing ? ing.from_scratch : true,
+      note: ing.note,
+      size: ing.size,
       sort: i,
     }))
   );

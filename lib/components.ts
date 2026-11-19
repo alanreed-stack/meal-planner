@@ -24,6 +24,8 @@ export type RecipeRow = {
   unit: string | null;
   category: string;
   family_only?: boolean;
+  note?: string | null;
+  size?: string | null;
   component_id?: string | null;
   from_scratch?: boolean | null;
 };
@@ -34,6 +36,8 @@ export type PlainIngredient = {
   unit: string | null;
   category: string;
   family_only: boolean;
+  note: string | null;
+  size: string | null;
   /** The component this came from, if any. */
   via: string | null;
 };
@@ -46,7 +50,7 @@ export function expandIngredients(rows: RecipeRow[], components: ComponentMap): 
   for (const r of rows) {
     const family_only = !!r.family_only;
     if (!r.component_id) {
-      out.push({ name: r.name, qty: r.qty, unit: r.unit, category: r.category, family_only, via: null });
+      out.push({ name: r.name, qty: r.qty, unit: r.unit, category: r.category, family_only, note: r.note ?? null, size: r.size ?? null, via: null });
       continue;
     }
     const c = components.get(r.component_id);
@@ -54,7 +58,7 @@ export function expandIngredients(rows: RecipeRow[], components: ComponentMap): 
     const batches = r.qty == null ? 1 : Number(r.qty);
     if (r.from_scratch === false) {
       const name = c.buy_as?.trim() || c.name;
-      out.push({ name, qty: batches, unit: c.buy_unit, category: guessCategory(name), family_only, via: c.name });
+      out.push({ name, qty: batches, unit: c.buy_unit, category: guessCategory(name), family_only, note: null, size: null, via: c.name });
       continue;
     }
     for (const i of c.ingredients) {
@@ -64,6 +68,8 @@ export function expandIngredients(rows: RecipeRow[], components: ComponentMap): 
         unit: i.unit,
         category: i.category,
         family_only,
+        note: null,
+        size: null,
         via: c.name,
       });
     }
